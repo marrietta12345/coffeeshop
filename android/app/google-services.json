@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "362857030405",
+    "project_id": "kafelo-mobile-application",
+    "storage_bucket": "kafelo-mobile-application.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:362857030405:android:40c3786c4a9349ba118d6c",
+        "android_client_info": {
+          "package_name": "com.example.local_based_coffee_shops_mobile_application"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAhqRACe9-Pfsr833sCVCe7pLuf5GPLHAc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
