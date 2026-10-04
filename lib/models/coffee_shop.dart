@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'menu_item.dart';
+import 'operating_hours.dart';
 import 'review.dart';
 
 enum ShopCategory { coffee, other }
@@ -26,6 +27,25 @@ class CoffeeShop {
   final DateTime? createdAt;
   final String? phoneNumber;
   final String? website;
+  // Optional social links (Online Presence), full https URLs.
+  final String? facebookUrl;
+  final String? instagramUrl;
+  final String? tiktokUrl;
+  // 'mall' or 'standalone' (from Business Sign Up's Location Type). Older
+  // cafés may not have it — then a mall name means it's inside a mall.
+  final String? locationType;
+  // Set only for cafés located inside a mall; all optional.
+  final String? mallName;
+  final String? mallFloor; // e.g. "2nd Floor"
+  final String? mallLandmark; // e.g. "Near the cinema entrance"
+  // What the café offers, set by its owner — matched against customers'
+  // Coffee Preferences for "Recommended for You". Values use the same
+  // option names as CoffeePreferences.
+  final List<String> coffeeTypes;
+  final List<String> atmospheres;
+  final List<String> amenities; // CoffeePreferences amenity keys
+  // Weekly schedule + temporary closure — drives Open Now / Closed Now.
+  final OperatingHours hours;
   final List<MenuItem> menu;
   final List<Review> reviews;
 
@@ -42,7 +62,7 @@ class CoffeeShop {
     required this.rating,
     required this.category,
     this.isOpenNow = true,
-    this.photoCount = 6,
+    this.photoCount = 0,
     this.photoUrls = const [],
     this.logoUrl,
     this.bannerUrl,
@@ -51,13 +71,23 @@ class CoffeeShop {
     this.createdAt,
     this.phoneNumber,
     this.website,
+    this.facebookUrl,
+    this.instagramUrl,
+    this.tiktokUrl,
+    this.locationType,
+    this.mallName,
+    this.mallFloor,
+    this.mallLandmark,
+    this.coffeeTypes = const [],
+    this.atmospheres = const [],
+    this.amenities = const [],
+    this.hours = const OperatingHours(),
     this.menu = const [],
     this.reviews = const [],
   });
 
   /// Builds a shop from a `shops/{id}` Firestore document — used for
-  /// shops owners create through Business Sign Up / their dashboard,
-  /// as opposed to the bundled mock data.
+  /// shops owners create through Business Sign Up / their dashboard.
   factory CoffeeShop.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data() ?? {};
     return CoffeeShop(
@@ -73,9 +103,8 @@ class CoffeeShop {
       rating: (data['rating'] as num?)?.toDouble() ?? 0,
       category: ShopCategory.coffee,
       isOpenNow: (data['isOpenNow'] as bool?) ?? true,
-      // Real owner-created shops have no photos until they upload their
-      // own — don't show random stock placeholder images for them like
-      // the bundled mock demo shops use.
+      // Shops have no photos until they upload their own — never show
+      // random stock placeholder images.
       photoCount: (data['photoCount'] as num?)?.toInt() ?? 0,
       photoUrls: (data['photoUrls'] as List?)?.map((e) => e.toString()).toList() ?? const [],
       logoUrl: data['logoUrl'] as String?,
@@ -85,11 +114,48 @@ class CoffeeShop {
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
       phoneNumber: data['phoneNumber'] as String?,
       website: data['website'] as String?,
+      facebookUrl: data['facebookUrl'] as String?,
+      instagramUrl: data['instagramUrl'] as String?,
+      tiktokUrl: data['tiktokUrl'] as String?,
+      locationType: data['locationType'] as String?,
+      mallName: data['mallName'] as String?,
+      mallFloor: data['mallFloor'] as String?,
+      mallLandmark: data['mallLandmark'] as String?,
+      coffeeTypes: _stringList(data['coffeeTypes']),
+      atmospheres: _stringList(data['atmospheres']),
+      amenities: _stringList(data['amenities']),
+      hours: OperatingHours.fromFirestore(data),
       // New owner-created shops don't have menu/reviews yet — those get
       // added once shop management + reviews are wired to Firestore too.
       menu: const [],
       reviews: const [],
     );
+  }
+
+  static List<String> _stringList(Object? value) =>
+      (value as List?)?.map((e) => e.toString()).toList() ?? const [];
+
+  bool get isInMall => locationType != 'standalone' && (mallName?.trim().isNotEmpty ?? false);
+
+  /// The location line shown across the app. Cafés inside a mall read
+  /// "Inside Gaisano Mall, Butuan City" (mall + the city from the
+  /// address); every other café shows its address exactly as before.
+  String get locationLabel {
+    if (!isInMall) return address;
+    final mall = mallName!.trim();
+    final parts = address.split(',').map((p) => p.trim()).where((p) => p.isNotEmpty).toList();
+    return parts.isEmpty ? 'Inside $mall' : 'Inside $mall, ${parts.last}';
+  }
+
+  /// Floor and landmark inside the mall, e.g. "2nd Floor · Near the Food
+  /// Court" — null when the café isn't in a mall or neither detail is set.
+  String? get mallDetails {
+    if (!isInMall) return null;
+    final details = [mallFloor, mallLandmark]
+        .map((d) => d?.trim() ?? '')
+        .where((d) => d.isNotEmpty)
+        .toList();
+    return details.isEmpty ? null : details.join(' · ');
   }
 
   String get categoryLabel {
@@ -101,13 +167,8 @@ class CoffeeShop {
     }
   }
 
-  /// How many photos this shop actually has to display — real uploaded
-  /// photos if any exist, otherwise the bundled demo photoCount (mock
-  /// shops only) or 0 (real shops with nothing uploaded yet).
+  /// How many photos this shop actually has to display — its real
+  /// uploaded photos, or the stored photoCount (0 when nothing has been
+  /// uploaded yet).
   int get effectivePhotoCount => photoUrls.isNotEmpty ? photoUrls.length : photoCount;
-
-  /// A deterministic, free placeholder photo for this shop — same shop
-  /// always gets the same picture. Used only for the bundled mock demo
-  /// shops; real shops use `photoUrls` once they've uploaded photos.
-  String coverPhotoUrl([int index = 0]) => 'https://picsum.photos/seed/$id-photo$index/600/450';
 }

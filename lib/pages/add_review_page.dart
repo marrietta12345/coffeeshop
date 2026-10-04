@@ -1,18 +1,26 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../theme/app_colors.dart';
 import '../models/coffee_shop.dart';
+import '../models/review.dart';
+import '../utils/review_service.dart';
+import '../widgets/top_banner.dart';
 
 /// Full-page "Write a Review" flow — replaces the old bottom sheet.
 /// Styled to match the rest of the app's auth-style header (dark top +
 /// white rounded card) so it feels like part of the same brand, not a
 /// bolted-on popup.
 ///
-/// Returns a (rating, text) record via Navigator.pop when the person
-/// posts, or null if they just go back.
+/// Saves the review (and optional photo) for [shop] itself, then pops
+/// `true`; pops null if the person just goes back. If they've already
+/// reviewed this shop, [existing] pre-fills the form and posting updates
+/// that review.
 class AddReviewPage extends StatefulWidget {
   final CoffeeShop shop;
+  final Review? existing;
 
-  const AddReviewPage({super.key, required this.shop});
+  const AddReviewPage({super.key, required this.shop, this.existing});
 
   @override
   State<AddReviewPage> createState() => _AddReviewPageState();
@@ -21,7 +29,11 @@ class AddReviewPage extends StatefulWidget {
 class _AddReviewPageState extends State<AddReviewPage> {
   double _rating = 5;
   final _textController = TextEditingController();
-  bool _photoAttached = false;
+  File? _photo; // newly picked photo
+  bool _keepExistingPhoto = false; // keep the photo from an earlier review
+  bool _isPosting = false;
+
+  bool get _photoAttached => _photo != null || _keepExistingPhoto;
 
   static const _ratingLabels = {
     1: 'Poor',
@@ -32,13 +44,57 @@ class _AddReviewPageState extends State<AddReviewPage> {
   };
 
   @override
+  void initState() {
+    super.initState();
+    final existing = widget.existing;
+    if (existing != null) {
+      _rating = existing.rating.clamp(1, 5).toDouble();
+      _textController.text = existing.text;
+      _keepExistingPhoto = existing.hasPhoto;
+    }
+  }
+
+  @override
   void dispose() {
     _textController.dispose();
     super.dispose();
   }
 
-  void _submit() {
-    Navigator.pop(context, (_rating, _textController.text.trim()));
+  Future<void> _pickPhoto() async {
+    final picked = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 80, maxWidth: 1600);
+    if (picked == null || !mounted) return;
+    setState(() {
+      _photo = File(picked.path);
+      _keepExistingPhoto = false;
+    });
+  }
+
+  void _removePhoto() {
+    setState(() {
+      _photo = null;
+      _keepExistingPhoto = false;
+    });
+  }
+
+  Future<void> _submit() async {
+    FocusScope.of(context).unfocus();
+    setState(() => _isPosting = true);
+    try {
+      await ReviewService.submitReview(
+        shop: widget.shop,
+        rating: _rating,
+        text: _textController.text.trim(),
+        photo: _photo,
+        keepExistingPhoto: _keepExistingPhoto,
+      );
+      if (!mounted) return;
+      Navigator.pop(context, true);
+    } catch (e) {
+      debugPrint('Posting review failed: $e');
+      if (!mounted) return;
+      setState(() => _isPosting = false);
+      showTopBanner(context, "Couldn't post your review. Please try again.", isSuccess: false);
+    }
   }
 
   @override
@@ -176,7 +232,7 @@ class _AddReviewPageState extends State<AddReviewPage> {
                       ),
                       const SizedBox(height: 14),
                       InkWell(
-                        onTap: () => setState(() => _photoAttached = !_photoAttached),
+                        onTap: _isPosting ? null : _pickPhoto,
                         borderRadius: BorderRadius.circular(12),
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
@@ -196,7 +252,7 @@ class _AddReviewPageState extends State<AddReviewPage> {
                               ),
                               const SizedBox(width: 10),
                               Text(
-                                _photoAttached ? 'Photo attached' : 'Add a photo',
+                                _photoAttached ? 'Photo attached' : 'Add a photo (optional)',
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
@@ -207,6 +263,14 @@ class _AddReviewPageState extends State<AddReviewPage> {
                           ),
                         ),
                       ),
+                      if (_photoAttached) ...[
+                        const SizedBox(height: 10),
+                        _PhotoPreview(
+                          photo: _photo,
+                          photoUrl: _keepExistingPhoto ? widget.existing?.photoUrl : null,
+                          onRemove: _isPosting ? null : _removePhoto,
+                        ),
+                      ],
                       const SizedBox(height: 32),
                       SizedBox(
                         width: double.infinity,
@@ -217,11 +281,17 @@ class _AddReviewPageState extends State<AddReviewPage> {
                             disabledBackgroundColor: AppColors.primaryBrown.withOpacity(0.35),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
-                          onPressed: canSubmit ? _submit : null,
-                          child: const Text(
-                            'Post Review',
-                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16),
-                          ),
+                          onPressed: canSubmit && !_isPosting ? _submit : null,
+                          child: _isPosting
+                              ? const SizedBox(
+                                  width: 22,
+                                  height: 22,
+                                  child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                                )
+                              : const Text(
+                                  'Post Review',
+                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16),
+                                ),
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -233,6 +303,50 @@ class _AddReviewPageState extends State<AddReviewPage> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Preview of the attached photo with a small remove (×) button.
+class _PhotoPreview extends StatelessWidget {
+  final File? photo;
+  final String? photoUrl;
+  final VoidCallback? onRemove;
+
+  const _PhotoPreview({this.photo, this.photoUrl, this.onRemove});
+
+  @override
+  Widget build(BuildContext context) {
+    final Widget image = photo != null
+        ? Image.file(photo!, fit: BoxFit.cover)
+        : Image.network(
+            photoUrl ?? '',
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => Container(
+              color: AppColors.inputFill,
+              child: const Icon(Icons.image_outlined, color: AppColors.textGrey),
+            ),
+          );
+
+    return Stack(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: SizedBox(width: double.infinity, height: 160, child: image),
+        ),
+        Positioned(
+          top: 8,
+          right: 8,
+          child: GestureDetector(
+            onTap: onRemove,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+              child: const Icon(Icons.close_rounded, size: 18, color: Colors.white),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

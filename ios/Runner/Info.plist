@@ -67,6 +67,8 @@
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Kafelo lets you choose photos for your reviews, profile, and shop gallery.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Kafelo needs your location to help you set your shop's exact position on the map.</string>
 </dict>

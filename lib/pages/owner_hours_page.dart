@@ -2,9 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../theme/app_colors.dart';
 import '../models/coffee_shop.dart';
+import '../models/operating_hours.dart';
+import '../widgets/auth_text_field.dart';
+import '../widgets/open_status.dart';
+import '../widgets/schedule_editor.dart';
+import '../widgets/settings_widgets.dart';
 import '../widgets/top_banner.dart';
 
-/// Edit the shop's opening/closing hours using native time pickers.
+/// Owner's operating schedule: hours for each day of the week, plus an
+/// optional "Temporarily closed" status. Customers' Open Now / Closed Now
+/// is worked out from this automatically — there's no manual switch.
 class OwnerHoursPage extends StatefulWidget {
   final CoffeeShop shop;
 
@@ -15,54 +22,31 @@ class OwnerHoursPage extends StatefulWidget {
 }
 
 class _OwnerHoursPageState extends State<OwnerHoursPage> {
-  late String _openTime;
-  late String _closeTime;
+  late OperatingHours _hours = widget.shop.hours;
+  late final TextEditingController _noteController = TextEditingController(text: widget.shop.hours.closureNote ?? '');
   bool _isSaving = false;
 
   @override
-  void initState() {
-    super.initState();
-    _openTime = widget.shop.openTime;
-    _closeTime = widget.shop.closeTime;
-  }
-
-  String _formatTime(TimeOfDay time) {
-    final hour = time.hourOfPeriod == 0 ? 12 : time.hourOfPeriod;
-    final minute = time.minute.toString().padLeft(2, '0');
-    final period = time.period == DayPeriod.am ? 'AM' : 'PM';
-    return minute == '00' ? '$hour $period' : '$hour:$minute $period';
-  }
-
-  Future<void> _pickTime({required bool isOpenTime}) async {
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.now(),
-      builder: (context, child) => Theme(
-        data: Theme.of(context).copyWith(colorScheme: const ColorScheme.light(primary: AppColors.primaryBrown)),
-        child: child!,
-      ),
-    );
-    if (picked == null) return;
-    setState(() {
-      if (isOpenTime) {
-        _openTime = _formatTime(picked);
-      } else {
-        _closeTime = _formatTime(picked);
-      }
-    });
+  void dispose() {
+    _noteController.dispose();
+    super.dispose();
   }
 
   Future<void> _save() async {
     setState(() => _isSaving = true);
+    final note = _noteController.text.trim();
     try {
-      await FirebaseFirestore.instance.collection('shops').doc(widget.shop.id).set({
-        'openTime': _openTime,
-        'closeTime': _closeTime,
-      }, SetOptions(merge: true));
+      // update() replaces the whole schedule, so days switched off are removed.
+      await FirebaseFirestore.instance.collection('shops').doc(widget.shop.id).update({
+        'operatingHours': _hours.toFirestoreMap(),
+        'temporarilyClosed': _hours.temporarilyClosed,
+        'closureNote': _hours.temporarilyClosed && note.isNotEmpty ? note : null,
+      });
       if (!mounted) return;
       showTopBanner(context, 'Hours updated!', isSuccess: true);
       Navigator.pop(context);
     } catch (e) {
+      debugPrint('Saving hours failed: $e');
       if (!mounted) return;
       showTopBanner(context, "Couldn't save changes. Please try again.", isSuccess: false);
     } finally {
@@ -88,63 +72,57 @@ class _OwnerHoursPageState extends State<OwnerHoursPage> {
               ),
             ),
             Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _TimeRow(label: 'Opens at', value: _openTime, onTap: () => _pickTime(isOpenTime: true)),
-                    const SizedBox(height: 14),
-                    _TimeRow(label: 'Closes at', value: _closeTime, onTap: () => _pickTime(isOpenTime: false)),
-                    const Spacer(),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 52,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primaryBrown,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        onPressed: _isSaving ? null : _save,
-                        child: _isSaving
-                            ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
-                            : const Text('Save Changes', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
-                      ),
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+                children: [
+                  // What customers will see right now (live preview).
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryBrown.withOpacity(0.06),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Customers see', style: TextStyle(fontSize: 11.5, color: AppColors.textGrey)),
+                        const SizedBox(height: 4),
+                        OpenStatusLine(hours: _hours.copyWith(closureNote: _noteController.text.trim()), fontSize: 13),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  const AuthSectionLabel('Operating Days & Hours'),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Switch on the days you\'re open and set the hours (Philippine time).',
+                    style: TextStyle(fontSize: 11.5, color: AppColors.textGrey),
+                  ),
+                  const SizedBox(height: 16),
+                  ScheduleEditor(value: _hours, onChanged: (h) => setState(() => _hours = h)),
+                  const SizedBox(height: 28),
+                  const AuthSectionLabel('Temporary Closure'),
+                  const SizedBox(height: 16),
+                  SettingsSwitchTile(
+                    icon: Icons.pause_circle_outline_rounded,
+                    title: 'Temporarily closed',
+                    subtitle: 'Shows "Temporarily Closed" to customers instead of your hours until you turn this off.',
+                    value: _hours.temporarilyClosed,
+                    onChanged: (v) => setState(() => _hours = _hours.copyWith(temporarilyClosed: v)),
+                  ),
+                  if (_hours.temporarilyClosed) ...[
+                    const SizedBox(height: 4),
+                    AuthTextField(
+                      label: 'Note for customers',
+                      controller: _noteController,
+                      hint: 'Optional — e.g. Closed for renovation until Oct 20',
                     ),
                   ],
-                ),
+                  const SizedBox(height: 28),
+                  AuthSubmitButton(label: 'Save Changes', isLoading: _isSaving, onPressed: _save),
+                ],
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _TimeRow extends StatelessWidget {
-  final String label;
-  final String value;
-  final VoidCallback onTap;
-
-  const _TimeRow({required this.label, required this.value, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        decoration: BoxDecoration(color: AppColors.inputFill, borderRadius: BorderRadius.circular(14)),
-        child: Row(
-          children: [
-            const Icon(Icons.access_time_rounded, color: AppColors.primaryBrown, size: 20),
-            const SizedBox(width: 12),
-            Expanded(child: Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark))),
-            Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.primaryBrown)),
-            const SizedBox(width: 6),
-            const Icon(Icons.chevron_right_rounded, color: AppColors.textGrey),
           ],
         ),
       ),

@@ -2,15 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 /// Persists "saved" (favorited) shops per signed-in user, under
-/// `users/{uid}/savedShops/{shopId}`. Requires this Firestore rule
-/// alongside the existing `users/{userId}` rule:
-///
-/// match /users/{userId} {
-///   allow read, write: if request.auth != null && request.auth.uid == userId;
-///   match /savedShops/{shopId} {
-///     allow read, write: if request.auth != null && request.auth.uid == userId;
-///   }
-/// }
+/// `users/{uid}/savedShops/{shopId}` (see `firestore.rules`).
 class SavedShopsService {
   SavedShopsService._();
 

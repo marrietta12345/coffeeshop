@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../models/coffee_shop.dart';
 import 'shop_photo.dart';
+import 'open_status.dart';
 
 /// Compact card used in horizontal carousels — "Nearby Coffee Shops" on
 /// the map screen, "Popular Coffee Shops" on Explore. Photo, name,
@@ -39,7 +40,45 @@ class ShopMiniCard extends StatelessWidget {
           children: [
             AspectRatio(
               aspectRatio: 16 / 11,
-              child: ShopPhoto(shop: shop, width: double.infinity, height: double.infinity),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  ShopPhoto(shop: shop, width: double.infinity, height: double.infinity),
+                  Positioned(top: 6, left: 6, child: OpenStatusBadge(hours: shop.hours)),
+                  // Mall cafés: a small badge so it's clear at a glance.
+                  if (shop.isInMall)
+                    Positioned(
+                      left: 6,
+                      right: 6,
+                      bottom: 6,
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.92),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.local_mall_rounded, size: 11, color: AppColors.primaryBrown),
+                              const SizedBox(width: 3),
+                              Flexible(
+                                child: Text(
+                                  'Inside ${shop.mallName!.trim()}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.textDark),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),

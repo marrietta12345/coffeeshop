@@ -1,12 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../theme/app_colors.dart';
+import '../models/coffee_preferences.dart';
 import '../models/coffee_shop.dart';
 import '../widgets/auth_text_field.dart';
+import '../widgets/category_chip.dart';
 import '../widgets/top_banner.dart';
+import '../utils/form_validators.dart';
+import '../utils/user_profile_service.dart';
+import '../utils/online_links.dart';
 
-/// Edit the shop's basic profile info — name, description, phone, and
-/// website. Writes straight to the shop's Firestore document.
+/// Edit the shop's basic profile info — name, description, phone,
+/// Online Presence (website + social links), (optionally) the mall it's inside, and its Café Features
+/// (coffee types, atmosphere, must-haves) that customers' Coffee
+/// Preferences are matched against for "Recommended for You". Writes
+/// straight to the shop's Firestore document.
 class OwnerEditProfilePage extends StatefulWidget {
   final CoffeeShop shop;
 
@@ -22,15 +30,70 @@ class _OwnerEditProfilePageState extends State<OwnerEditProfilePage> {
   late final TextEditingController _descriptionController;
   late final TextEditingController _phoneController;
   late final TextEditingController _websiteController;
+  late final TextEditingController _facebookController;
+  late final TextEditingController _instagramController;
+  late final TextEditingController _tiktokController;
+  late final TextEditingController _mallNameController;
+  late final TextEditingController _mallFloorController;
+  late final TextEditingController _mallLandmarkController;
+  late final Set<String> _coffeeTypes = {...widget.shop.coffeeTypes};
+  late final Set<String> _atmospheres = {...widget.shop.atmospheres};
+  late final Set<String> _amenities = {...widget.shop.amenities};
   bool _isSaving = false;
+
+  void _toggleIn(Set<String> set, String value) {
+    setState(() => set.contains(value) ? set.remove(value) : set.add(value));
+  }
 
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.shop.name);
     _descriptionController = TextEditingController(text: widget.shop.description);
-    _phoneController = TextEditingController(text: widget.shop.phoneNumber ?? '');
+    _phoneController = TextEditingController(text: _formatPhone(widget.shop.phoneNumber));
     _websiteController = TextEditingController(text: widget.shop.website ?? '');
+    _facebookController = TextEditingController(text: widget.shop.facebookUrl ?? '');
+    _instagramController = TextEditingController(text: widget.shop.instagramUrl ?? '');
+    _tiktokController = TextEditingController(text: widget.shop.tiktokUrl ?? '');
+    _mallNameController = TextEditingController(text: widget.shop.mallName ?? '');
+    _mallFloorController = TextEditingController(text: widget.shop.mallFloor ?? '');
+    _mallLandmarkController = TextEditingController(text: widget.shop.mallLandmark ?? '');
+    if ((widget.shop.phoneNumber ?? '').trim().isEmpty) _loadSignUpPhone();
+  }
+
+  /// Shows a saved number in +639XXXXXXXXX form (or just the +639 prefix
+  /// when there isn't one yet).
+  static String _formatPhone(String? phone) {
+    final normalized = FormValidators.normalizePhMobile(phone ?? '');
+    return normalized.isEmpty ? FormValidators.phMobilePrefix : normalized;
+  }
+
+  /// Cafés created before the phone number was saved on the shop itself
+  /// only have it on the owner's account (from sign-up) — show that one.
+  Future<void> _loadSignUpPhone() async {
+    try {
+      final profile = await UserProfileService.fetchProfile();
+      final phone = (profile['phoneNumber'] as String?)?.trim() ?? '';
+      // Don't overwrite anything the owner has started typing.
+      if (!mounted || phone.isEmpty || _phoneController.text != FormValidators.phMobilePrefix) return;
+      final formatted = _formatPhone(phone);
+      setState(() => _phoneController.text = formatted);
+      // Copy it onto the café's listing so it shows here (and on the
+      // customers' Call button) from now on.
+      await FirebaseFirestore.instance
+          .collection('shops')
+          .doc(widget.shop.id)
+          .set({'phoneNumber': formatted}, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint('Could not load sign-up phone number: $e');
+    }
+  }
+
+  /// Optional, but if entered it must be a valid Philippine mobile number.
+  static String? _validatePhone(String? value) {
+    final normalized = FormValidators.normalizePhMobile(value ?? '');
+    if (normalized.isEmpty || normalized == FormValidators.phMobilePrefix) return null;
+    return FormValidators.phMobile(value);
   }
 
   @override
@@ -39,6 +102,12 @@ class _OwnerEditProfilePageState extends State<OwnerEditProfilePage> {
     _descriptionController.dispose();
     _phoneController.dispose();
     _websiteController.dispose();
+    _facebookController.dispose();
+    _instagramController.dispose();
+    _tiktokController.dispose();
+    _mallNameController.dispose();
+    _mallFloorController.dispose();
+    _mallLandmarkController.dispose();
     super.dispose();
   }
 
@@ -46,12 +115,29 @@ class _OwnerEditProfilePageState extends State<OwnerEditProfilePage> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isSaving = true);
 
+    String? optional(TextEditingController c) => c.text.trim().isEmpty ? null : c.text.trim();
+    // Floor and landmark only mean something inside a mall.
+    final mallName = optional(_mallNameController);
+
     try {
       await FirebaseFirestore.instance.collection('shops').doc(widget.shop.id).set({
         'name': _nameController.text.trim(),
         'description': _descriptionController.text.trim(),
-        'phoneNumber': _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
-        'website': _websiteController.text.trim().isEmpty ? null : _websiteController.text.trim(),
+        'phoneNumber': _validatePhone(_phoneController.text) == null &&
+                FormValidators.normalizePhMobile(_phoneController.text) != FormValidators.phMobilePrefix
+            ? FormValidators.normalizePhMobile(_phoneController.text)
+            : null,
+        'website': OnlineLinks.toStored(_websiteController.text),
+        'facebookUrl': OnlineLinks.toStored(_facebookController.text),
+        'instagramUrl': OnlineLinks.toStored(_instagramController.text),
+        'tiktokUrl': OnlineLinks.toStored(_tiktokController.text),
+        'locationType': mallName == null ? 'standalone' : 'mall',
+        'mallName': mallName,
+        'mallFloor': mallName == null ? null : optional(_mallFloorController),
+        'mallLandmark': mallName == null ? null : optional(_mallLandmarkController),
+        'coffeeTypes': _coffeeTypes.toList(),
+        'atmospheres': _atmospheres.toList(),
+        'amenities': _amenities.toList(),
       }, SetOptions(merge: true));
 
       if (!mounted) return;
@@ -106,7 +192,7 @@ class _OwnerEditProfilePageState extends State<OwnerEditProfilePage> {
                           hintText: 'Tell customers about your shop...',
                           filled: true,
                           fillColor: AppColors.inputFill,
-                          contentPadding: const EdgeInsets.all(14),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
                         ),
                       ),
@@ -114,16 +200,117 @@ class _OwnerEditProfilePageState extends State<OwnerEditProfilePage> {
                       AuthTextField(
                         label: 'Phone Number',
                         controller: _phoneController,
-                        hint: 'Optional',
+                        hint: '+639XXXXXXXXX',
                         keyboardType: TextInputType.phone,
+                        inputFormatters: const [PhMobileInputFormatter()],
+                        validator: _validatePhone,
+                      ),
+                      const SizedBox(height: 28),
+                      const AuthSectionLabel('Online Presence'),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'All optional — add the links your café already has.',
+                        style: TextStyle(fontSize: 11.5, color: AppColors.textGrey),
+                      ),
+                      const SizedBox(height: 16),
+                      AuthTextField(
+                        label: 'Website URL',
+                        labelIcon: OnlinePlatform.website.icon,
+                        controller: _websiteController,
+                        hint: OnlinePlatform.website.example,
+                        keyboardType: TextInputType.url,
+                        validator: (v) => OnlineLinks.validate(OnlinePlatform.website, v),
                       ),
                       const SizedBox(height: 18),
                       AuthTextField(
-                        label: 'Website',
-                        controller: _websiteController,
-                        hint: 'Optional',
+                        label: 'Facebook URL',
+                        labelIcon: OnlinePlatform.facebook.icon,
+                        controller: _facebookController,
+                        hint: OnlinePlatform.facebook.example,
                         keyboardType: TextInputType.url,
+                        validator: (v) => OnlineLinks.validate(OnlinePlatform.facebook, v),
                       ),
+                      const SizedBox(height: 18),
+                      AuthTextField(
+                        label: 'Instagram URL',
+                        labelIcon: OnlinePlatform.instagram.icon,
+                        controller: _instagramController,
+                        hint: OnlinePlatform.instagram.example,
+                        keyboardType: TextInputType.url,
+                        validator: (v) => OnlineLinks.validate(OnlinePlatform.instagram, v),
+                      ),
+                      const SizedBox(height: 18),
+                      AuthTextField(
+                        label: 'TikTok URL',
+                        labelIcon: OnlinePlatform.tiktok.icon,
+                        controller: _tiktokController,
+                        hint: OnlinePlatform.tiktok.example,
+                        keyboardType: TextInputType.url,
+                        validator: (v) => OnlineLinks.validate(OnlinePlatform.tiktok, v),
+                      ),
+                      const SizedBox(height: 28),
+                      const AuthSectionLabel('Location'),
+                      const SizedBox(height: 16),
+                      AuthTextField(
+                        label: 'Mall Name',
+                        controller: _mallNameController,
+                        hint: 'Optional — only if your shop is inside a mall',
+                      ),
+                      const SizedBox(height: 18),
+                      AuthTextField(
+                        label: 'Floor Level',
+                        controller: _mallFloorController,
+                        hint: 'Optional — e.g. 2nd Floor',
+                      ),
+                      const SizedBox(height: 18),
+                      AuthTextField(
+                        label: 'Nearby Landmark',
+                        controller: _mallLandmarkController,
+                        hint: 'Optional — e.g. Near the cinema entrance',
+                      ),
+                      const SizedBox(height: 28),
+                      const AuthSectionLabel('Café Features'),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Helps customers whose preferences match find your café.',
+                        style: TextStyle(fontSize: 12, color: AppColors.textGrey),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text('Coffee served', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                      const SizedBox(height: 8),
+                      _chips([
+                        for (final type in CoffeePreferences.coffeeTypeOptions)
+                          CategoryChip(
+                            label: type,
+                            icon: Icons.local_cafe_outlined,
+                            selected: _coffeeTypes.contains(type),
+                            onTap: () => _toggleIn(_coffeeTypes, type),
+                          ),
+                      ]),
+                      const SizedBox(height: 16),
+                      const Text('Atmosphere', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                      const SizedBox(height: 8),
+                      _chips([
+                        for (final mood in CoffeePreferences.atmosphereOptions)
+                          CategoryChip(
+                            label: mood,
+                            icon: Icons.storefront_outlined,
+                            selected: _atmospheres.contains(mood),
+                            onTap: () => _toggleIn(_atmospheres, mood),
+                          ),
+                      ]),
+                      const SizedBox(height: 16),
+                      const Text('Must-haves offered', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                      const SizedBox(height: 8),
+                      _chips([
+                        for (final entry in CoffeePreferences.amenityLabels.entries)
+                          CategoryChip(
+                            label: entry.value,
+                            icon: Icons.check_circle_outline_rounded,
+                            selected: _amenities.contains(entry.key),
+                            onTap: () => _toggleIn(_amenities, entry.key),
+                          ),
+                      ]),
                       const SizedBox(height: 28),
                       AuthSubmitButton(label: 'Save Changes', isLoading: _isSaving, onPressed: _save),
                     ],
@@ -136,4 +323,6 @@ class _OwnerEditProfilePageState extends State<OwnerEditProfilePage> {
       ),
     );
   }
+
+  Widget _chips(List<Widget> chips) => Wrap(spacing: 8, runSpacing: 10, children: chips);
 }

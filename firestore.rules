@@ -1,0 +1,179 @@
+rules_version = '2';
+
+// Kafelo — Cloud Firestore security rules.
+//
+// Paths the app uses:
+//   users/{uid}                      private profile (role, name, settings,
+//                                    visited cafés, discoveries, preferences)
+//   users/{uid}/savedShops/{shopId}  hearted cafés
+//   users/{uid}/collections/{id}     personal café collections
+//   shops/{shopId}                   public café listing (owner-managed)
+//   shops/{shopId}/reviews/{uid}     one review per user per café
+//
+// Images live in Supabase Storage, not here — these rules don't cover them.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isUser(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    // Field names this update adds, removes, or changes.
+    function changedKeys() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+
+    // ------------------------------------------------------------------
+    // Users — private; each person can only see and edit their own data.
+    // ------------------------------------------------------------------
+    match /users/{userId} {
+      allow read: if isUser(userId);
+
+      // Created once at sign-up with an account type.
+      allow create: if isUser(userId)
+        && request.resource.data.role in ['customer', 'owner'];
+
+      // Profile, settings, visited cafés, etc. — but the account type can
+      // never be changed, so a customer can't promote themselves to owner.
+      allow update: if isUser(userId)
+        && !changedKeys().hasAny(['role']);
+
+      allow delete: if false;
+
+      match /savedShops/{shopId} {
+        allow read, write: if isUser(userId);
+      }
+
+      match /collections/{collectionId} {
+        allow read, delete: if isUser(userId);
+        allow create, update: if isUser(userId)
+          && request.resource.data.name is string
+          && request.resource.data.name.size() > 0
+          && request.resource.data.name.size() <= 40
+          && request.resource.data.shopIds is list;
+      }
+    }
+
+    // ------------------------------------------------------------------
+    // Shops — public to read; owners manage their own listing. Signed-in
+    // customers may only nudge the counters the app maintains (views,
+    // favorites, and the rating totals that go with their own review).
+    // ------------------------------------------------------------------
+    match /shops/{shopId} {
+
+      function isOwner() {
+        return signedIn() && request.auth.uid == resource.data.ownerId;
+      }
+
+      function reviewPath() {
+        return /databases/$(database)/documents/shops/$(shopId)/reviews/$(request.auth.uid);
+      }
+
+      // The new rating totals must match exactly the review this user is
+      // writing in the same transaction (see ReviewService): a first
+      // review adds one to the count and its rating to the sum; an edit
+      // swaps the old rating for the new one.
+      function ratingTotalsMatchMyReview() {
+        let oldSum = resource.data.get('ratingSum', 0);
+        let oldCount = resource.data.get('reviewCount', 0);
+        let newSum = request.resource.data.ratingSum;
+        let newCount = request.resource.data.reviewCount;
+        return existsAfter(reviewPath())
+          && (
+            // first review of this shop by this user
+            (!exists(reviewPath())
+              && newCount == oldCount + 1
+              && newSum == oldSum + getAfter(reviewPath()).data.rating)
+            // editing their earlier review (get() only runs when it exists)
+            || (exists(reviewPath())
+              && newCount == oldCount
+              && newSum == oldSum + getAfter(reviewPath()).data.rating - get(reviewPath()).data.rating)
+          )
+          && newCount > 0
+          && math.abs(request.resource.data.rating - newSum / newCount) < 0.01;
+      }
+
+      allow read: if true;
+
+      // New listing from Business Sign Up — owned by its creator, with
+      // stats starting from zero.
+      allow create: if signedIn()
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.get('rating', 0) == 0
+        && request.resource.data.get('viewCount', 0) == 0
+        && request.resource.data.get('favoritesCount', 0) == 0
+        && !('ratingSum' in request.resource.data)
+        && !('reviewCount' in request.resource.data);
+
+      // Owner edits their listing (profile, hours, photos, location,
+      // mall info) — but can't hand it to someone else or edit its stats.
+      allow update: if isOwner()
+        && !changedKeys().hasAny(['ownerId', 'viewCount', 'favoritesCount', 'rating', 'ratingSum', 'reviewCount']);
+
+      allow delete: if isOwner();
+
+      // Anyone signed in: one profile view (+1).
+      allow update: if signedIn()
+        && changedKeys().hasOnly(['viewCount'])
+        && request.resource.data.viewCount == resource.data.get('viewCount', 0) + 1;
+
+      // Anyone signed in: save / unsave the café (±1).
+      allow update: if signedIn()
+        && changedKeys().hasOnly(['favoritesCount'])
+        && (request.resource.data.favoritesCount == resource.data.get('favoritesCount', 0) + 1
+          || request.resource.data.favoritesCount == resource.data.get('favoritesCount', 0) - 1);
+
+      // Anyone signed in: rating totals, only together with their review.
+      allow update: if signedIn()
+        && changedKeys().hasOnly(['rating', 'ratingSum', 'reviewCount'])
+        && ratingTotalsMatchMyReview();
+
+      // ----------------------------------------------------------------
+      // Reviews — public to read. Each user writes only their own review
+      // (document id = their uid), tied to this exact shop, and always in
+      // the same transaction as the shop's rating totals.
+      // ----------------------------------------------------------------
+      match /reviews/{userId} {
+
+        function shopPath() {
+          return /databases/$(database)/documents/shops/$(shopId);
+        }
+
+        function validReview() {
+          let data = request.resource.data;
+          return data.keys().hasOnly(['shopId', 'userId', 'userName', 'rating', 'text', 'photoUrl', 'likes', 'createdAt'])
+            && data.shopId == shopId
+            && data.userId == userId
+            && data.userName is string && data.userName.size() <= 60
+            && data.rating is number && data.rating >= 1 && data.rating <= 5
+            && data.text is string && data.text.size() > 0 && data.text.size() <= 2000
+            && (data.photoUrl == null || (data.photoUrl is string && data.photoUrl.size() <= 1000))
+            && data.createdAt == request.time;
+        }
+
+        allow read: if true;
+
+        allow create: if isUser(userId)
+          && validReview()
+          && request.resource.data.likes == 0
+          // shop count and sum go up with this review
+          && getAfter(shopPath()).data.get('reviewCount', 0) == get(shopPath()).data.get('reviewCount', 0) + 1
+          && getAfter(shopPath()).data.get('ratingSum', 0) == get(shopPath()).data.get('ratingSum', 0) + request.resource.data.rating;
+
+        allow update: if isUser(userId)
+          && validReview()
+          && request.resource.data.likes == resource.data.get('likes', 0)
+          // shop sum swaps the old rating for the new one
+          && getAfter(shopPath()).data.get('ratingSum', 0)
+            == get(shopPath()).data.get('ratingSum', 0) + request.resource.data.rating - resource.data.rating;
+
+        // Deleting would leave the shop's rating totals out of step.
+        allow delete: if false;
+      }
+    }
+  }
+}

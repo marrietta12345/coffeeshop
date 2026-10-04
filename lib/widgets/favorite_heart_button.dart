@@ -45,8 +45,7 @@ class _FavoriteHeartButtonState extends State<FavoriteHeartButton> {
       if (!mounted) return;
       setState(() => _isSaved = nowSaved);
 
-      // Only real (owner-created) shops have a live shops/{id} doc to
-      // update — the bundled mock demo shops don't exist in Firestore.
+      // Only shops with an owner have a live shops/{id} doc to update.
       if (widget.shop.ownerId != null) {
         ShopStatsService.adjustFavoritesCount(widget.shop.id, nowSaved ? 1 : -1);
       }

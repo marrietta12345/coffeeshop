@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -9,8 +10,17 @@ import '../widgets/top_banner.dart';
 import '../widgets/favorite_heart_button.dart';
 import '../widgets/shop_photo.dart';
 import '../widgets/menu_item_image.dart';
+import '../widgets/online_action_button.dart';
+import '../widgets/open_status.dart';
+import '../models/operating_hours.dart';
+import '../utils/online_links.dart';
 import '../utils/shop_stats_service.dart';
+import '../utils/review_service.dart';
+import '../utils/visited_shops_service.dart';
 import 'add_review_page.dart';
+import 'save_to_collection_sheet.dart';
+import '../utils/collections_service.dart';
+import '../models/shop_collection.dart';
 import 'best_sellers_page.dart';
 import '../utils/page_transitions.dart';
 
@@ -24,15 +34,22 @@ class ShopDetailPage extends StatefulWidget {
 }
 
 class _ShopDetailPageState extends State<ShopDetailPage> {
-  late List<Review> _reviews;
+  // This shop's reviews, kept live from shops/{id}/reviews.
+  List<Review> _reviews = [];
+  StreamSubscription<List<Review>>? _reviewsSubscription;
   late List<MenuItem> _menuItems;
   final Set<String> _likedItems = {}; // item names liked this session
 
   @override
   void initState() {
     super.initState();
-    _reviews = List.of(widget.shop.reviews);
     _menuItems = List.of(widget.shop.menu);
+    _reviewsSubscription = ReviewService.reviewsStream(widget.shop.id).listen(
+      (reviews) {
+        if (mounted) setState(() => _reviews = reviews);
+      },
+      onError: (Object error) => debugPrint('Reviews stream error: $error'),
+    );
 
     // Track a real profile view — skip counting the shop's own owner
     // browsing their own listing.
@@ -41,6 +58,32 @@ class _ShopDetailPageState extends State<ShopDetailPage> {
     if (shop.ownerId != null && shop.ownerId != currentUid) {
       ShopStatsService.recordView(shop.id);
     }
+    // Add to the viewer's Visited Cafés history — celebrating a
+    // brand-new discovery (Daily Discovery + streak).
+    if (currentUid != null && shop.ownerId != currentUid) {
+      _recordVisit(shop);
+    }
+  }
+
+  Future<void> _recordVisit(CoffeeShop shop) async {
+    final isNewDiscovery = await VisitedShopsService.recordVisit(shop);
+    if (!isNewDiscovery || !mounted) return;
+    final journey = await VisitedShopsService.journeyStream().first;
+    if (!mounted) return;
+    final streak = journey.currentStreak;
+    final streakText = streak > 1 ? ' • $streak-day streak 🔥' : '';
+    showTopBanner(
+      context,
+      'New café discovered! ☕ Daily Discovery done$streakText',
+      isSuccess: true,
+      duration: const Duration(seconds: 3),
+    );
+  }
+
+  @override
+  void dispose() {
+    _reviewsSubscription?.cancel();
+    super.dispose();
   }
 
   double get _averageRating {
@@ -78,17 +121,12 @@ class _ShopDetailPageState extends State<ShopDetailPage> {
     await launchUrl(Uri.parse('tel:$phone'));
   }
 
-  Future<void> _openWebsite() async {
-    final website = widget.shop.website;
-    if (website == null || website.trim().isEmpty) {
-      showTopBanner(context, 'This shop hasn\'t added a website yet.', isSuccess: false);
-      return;
+  /// Opens one of the café's website / social links in the browser or app.
+  Future<void> _openOnlineLink(OnlineLink link) async {
+    final opened = await launchUrl(Uri.parse(link.url), mode: LaunchMode.externalApplication);
+    if (!opened && mounted) {
+      showTopBanner(context, "Couldn't open ${link.platform.label}. Please try again.", isSuccess: false);
     }
-    var url = website.trim();
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      url = 'https://$url';
-    }
-    await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
   }
 
   void _openShare() {
@@ -97,22 +135,18 @@ class _ShopDetailPageState extends State<ShopDetailPage> {
   }
 
   Future<void> _openAddReview() async {
-    final result = await Navigator.of(context).push<(double, String)?>(
-      slideUpRoute(AddReviewPage(shop: widget.shop)),
+    // Posting again for the same shop edits the user's earlier review.
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    Review? existing;
+    for (final review in _reviews) {
+      if (review.userId == uid) existing = review;
+    }
+    final posted = await Navigator.of(context).push<bool>(
+      slideUpRoute(AddReviewPage(shop: widget.shop, existing: existing)),
     );
-    if (result == null) return;
-    final (rating, text) = result;
-    setState(() {
-      _reviews.insert(
-        0,
-        Review(
-          userName: 'You',
-          rating: rating,
-          timeAgo: 'Just now',
-          text: text,
-        ),
-      );
-    });
+    if (posted == true && mounted) {
+      showTopBanner(context, existing == null ? 'Review posted!' : 'Review updated!', isSuccess: true);
+    }
   }
 
   void _openSuggestEdit() {
@@ -172,16 +206,18 @@ class _ShopDetailPageState extends State<ShopDetailPage> {
                 expandedHeight: 0,
                 toolbarHeight: 0,
                 bottom: PreferredSize(
-                  preferredSize: const Size.fromHeight(460),
+                  // Mall cafés show two extra lines (mall + floor/landmark).
+                  preferredSize: Size.fromHeight(shop.isInMall ? 504 : 460),
                   child: _ShopHeader(
                     shop: shop,
                     averageRating: _averageRating,
                     onBack: () => Navigator.pop(context),
                     onCall: _openCall,
                     onDirections: _openDirections,
-                    onWebsite: _openWebsite,
+                    onOpenLink: _openOnlineLink,
                     onShare: _openShare,
                     onEdit: _openSuggestEdit,
+                    onSaveToCollection: () => showSaveToCollectionSheet(context, shop),
                   ),
                 ),
               ),
@@ -222,9 +258,10 @@ class _ShopHeader extends StatelessWidget {
   final VoidCallback onBack;
   final VoidCallback onCall;
   final VoidCallback onDirections;
-  final VoidCallback onWebsite;
+  final ValueChanged<OnlineLink> onOpenLink;
   final VoidCallback onShare;
   final VoidCallback onEdit;
+  final VoidCallback onSaveToCollection;
 
   const _ShopHeader({
     required this.shop,
@@ -232,9 +269,10 @@ class _ShopHeader extends StatelessWidget {
     required this.onBack,
     required this.onCall,
     required this.onDirections,
-    required this.onWebsite,
+    required this.onOpenLink,
     required this.onShare,
     required this.onEdit,
+    required this.onSaveToCollection,
   });
 
   @override
@@ -254,6 +292,23 @@ class _ShopHeader extends StatelessWidget {
               top: 12,
               right: 12,
               child: FavoriteHeartButton(shop: shop, size: 36),
+            ),
+            // Save to a collection — filled when it's already in one.
+            Positioned(
+              top: 12,
+              right: 56,
+              child: StreamBuilder<List<ShopCollection>>(
+                stream: CollectionsService.collectionsStream(),
+                builder: (context, snapshot) {
+                  final inACollection = (snapshot.data ?? const <ShopCollection>[])
+                      .any((c) => c.shopIds.contains(shop.id));
+                  return _RoundIconButton(
+                    icon: inACollection ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+                    onTap: onSaveToCollection,
+                    whiteBg: true,
+                  );
+                },
+              ),
             ),
             Positioned(
               bottom: -28,
@@ -316,22 +371,57 @@ class _ShopHeader extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 2),
-              Text(
-                '${shop.isOpenNow ? "Open" : "Closed"} • ${shop.openTime} Close ${shop.closeTime}',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: shop.isOpenNow ? const Color(0xFF2E7D32) : const Color(0xFFC62828),
+              // Open Now / Closed Now from the owner's schedule (Manila time).
+              OpenStatusLine(hours: shop.hours),
+              if (shop.isInMall) ...[
+                const SizedBox(height: 8),
+                // Pin icon with the mall line and floor/landmark aligned beside it.
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.only(top: 1),
+                      child: Icon(Icons.location_on_rounded, size: 16, color: AppColors.primaryBrown),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Inside ${shop.mallName!.trim()}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark),
+                          ),
+                          if (shop.mallDetails != null) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              shop.mallDetails!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontSize: 12, color: AppColors.textGrey),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-              ),
+              ],
               const SizedBox(height: 16),
+              // Equal-width columns, so 3 or 4 buttons are always evenly spaced.
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _IconActionButton(icon: Icons.call_rounded, label: 'Call', onTap: onCall),
-                  _IconActionButton(icon: Icons.directions_rounded, label: 'Directions', onTap: onDirections),
-                  _IconActionButton(icon: Icons.public_rounded, label: 'Website', onTap: onWebsite),
-                  _IconActionButton(icon: Icons.share_rounded, label: 'Share', onTap: onShare),
+                  for (final button in [
+                    _IconActionButton(icon: Icons.call_rounded, label: 'Call', onTap: onCall),
+                    _IconActionButton(icon: Icons.directions_rounded, label: 'Directions', onTap: onDirections),
+                    // Only when the owner added a website or social link.
+                    if (OnlineLinks.forShop(shop).isNotEmpty)
+                      OnlineActionButton(links: OnlineLinks.forShop(shop), onOpen: onOpenLink),
+                    _IconActionButton(icon: Icons.share_rounded, label: 'Share', onTap: onShare),
+                  ])
+                    Expanded(child: Center(child: button)),
                 ],
               ),
             ],
@@ -341,11 +431,15 @@ class _ShopHeader extends StatelessWidget {
           decoration: const BoxDecoration(
             border: Border(bottom: BorderSide(color: Color(0xFFEDEAE6))),
           ),
+          // Fixed tabs: all five fit the width, aligned with the content
+          // and never cut off at the edge.
           child: const TabBar(
-            isScrollable: true,
             labelColor: AppColors.primaryBrown,
             unselectedLabelColor: AppColors.textGrey,
             indicatorColor: AppColors.primaryBrown,
+            indicatorSize: TabBarIndicatorSize.label,
+            dividerColor: Colors.transparent, // the container already draws the line
+            labelPadding: EdgeInsets.symmetric(horizontal: 4),
             labelStyle: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
             tabs: [
               Tab(text: 'Overview'),
@@ -641,6 +735,18 @@ class _ReviewCard extends StatelessWidget {
 
   const _ReviewCard({required this.review});
 
+  /// Full-screen, pinch-to-zoom view of a review's photo.
+  void _showReviewPhoto(BuildContext context, String url) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black87,
+      builder: (context) => GestureDetector(
+        onTap: () => Navigator.pop(context),
+        child: InteractiveViewer(child: Center(child: Image.network(url))),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -682,21 +788,23 @@ class _ReviewCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(review.text, style: const TextStyle(fontSize: 13, color: AppColors.textDark, height: 1.4)),
-          if (review.photoCount > 0) ...[
+          if (review.hasPhoto) ...[
             const SizedBox(height: 8),
-            SizedBox(
-              height: 60,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: review.photoCount,
-                separatorBuilder: (_, __) => const SizedBox(width: 6),
-                itemBuilder: (context, i) => Container(
+            GestureDetector(
+              onTap: () => _showReviewPhoto(context, review.photoUrl!),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Image.network(
+                  review.photoUrl!,
                   width: 60,
-                  decoration: BoxDecoration(
+                  height: 60,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    width: 60,
+                    height: 60,
                     color: AppColors.primaryBrown.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(10),
+                    child: const Icon(Icons.image_outlined, color: AppColors.primaryBrown, size: 20),
                   ),
-                  child: const Icon(Icons.image_outlined, color: AppColors.primaryBrown, size: 20),
                 ),
               ),
             ),
@@ -1046,10 +1154,75 @@ class _AboutTab extends StatelessWidget {
         const SizedBox(height: 8),
         Text(shop.description, style: const TextStyle(fontSize: 13, color: AppColors.textDark, height: 1.5)),
         const SizedBox(height: 20),
-        _InfoRow(icon: Icons.location_on_outlined, text: shop.address),
-        _InfoRow(icon: Icons.access_time_rounded, text: 'Open ${shop.openTime} – Close ${shop.closeTime}'),
+        _InfoRow(icon: Icons.location_on_outlined, text: shop.locationLabel),
+        if (shop.isInMall && (shop.mallFloor?.trim().isNotEmpty ?? false))
+          _InfoRow(icon: Icons.layers_outlined, text: shop.mallFloor!.trim()),
+        if (shop.isInMall && (shop.mallLandmark?.trim().isNotEmpty ?? false))
+          _InfoRow(icon: Icons.signpost_outlined, text: shop.mallLandmark!.trim()),
+        _HoursRow(hours: shop.hours),
         _InfoRow(icon: Icons.category_outlined, text: shop.categoryLabel),
       ],
+    );
+  }
+}
+
+/// The weekly schedule in the About tab — one line per day, today in
+/// bold — or "Hours unavailable" / the temporary-closure status.
+class _HoursRow extends StatelessWidget {
+  final OperatingHours hours;
+
+  const _HoursRow({required this.hours});
+
+  @override
+  Widget build(BuildContext context) {
+    final today = DateTime.now().toUtc().add(OperatingHours.manilaOffset).weekday;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.access_time_rounded, size: 18, color: AppColors.primaryBrown),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                OpenStatusLine(hours: hours, fontSize: 13),
+                if (hours.hasHours) ...[
+                  const SizedBox(height: 8),
+                  for (var d = 1; d <= 7; d++)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            width: 44,
+                            child: Text(
+                              OperatingHours.shortDayNames[d]!,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: AppColors.textDark,
+                                fontWeight: d == today ? FontWeight.w800 : FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            hours.describeDay(d),
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: hours.days.containsKey(d) ? AppColors.textDark : AppColors.textGrey,
+                              fontWeight: d == today ? FontWeight.w800 : FontWeight.w400,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

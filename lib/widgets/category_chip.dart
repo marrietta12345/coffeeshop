@@ -50,12 +50,18 @@ class CategoryChip extends StatelessWidget {
               color: selected ? Colors.white : AppColors.textDark,
             ),
             const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: selected ? Colors.white : AppColors.textDark,
+            // Flexible + ellipsis only kicks in when a long label can't fit
+            // (narrow screens / large text) — otherwise it looks the same.
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: selected ? Colors.white : AppColors.textDark,
+                ),
               ),
             ),
           ],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../theme/app_colors.dart';
 
 /// The label + input pairing used across every sign-in/sign-up form in
@@ -15,6 +16,8 @@ class AuthTextField extends StatelessWidget {
   final TextInputType? keyboardType;
   final Widget? suffixIcon;
   final String? Function(String?)? validator;
+  final bool isRequired; // shows a red * after the label
+  final List<TextInputFormatter>? inputFormatters;
 
   const AuthTextField({
     super.key,
@@ -26,6 +29,8 @@ class AuthTextField extends StatelessWidget {
     this.keyboardType,
     this.suffixIcon,
     this.validator,
+    this.isRequired = false,
+    this.inputFormatters,
   });
 
   @override
@@ -47,6 +52,11 @@ class AuthTextField extends StatelessWidget {
                 color: AppColors.textDark,
               ),
             ),
+            if (isRequired)
+              const Text(
+                ' *',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFFD64545)),
+              ),
           ],
         ),
         const SizedBox(height: 8),
@@ -55,6 +65,7 @@ class AuthTextField extends StatelessWidget {
           obscureText: obscureText,
           keyboardType: keyboardType,
           validator: validator,
+          inputFormatters: inputFormatters,
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),
@@ -81,6 +92,7 @@ class AuthPasswordField extends StatefulWidget {
   final TextEditingController controller;
   final String hint;
   final String? Function(String?)? validator;
+  final bool isRequired;
 
   const AuthPasswordField({
     super.key,
@@ -88,6 +100,7 @@ class AuthPasswordField extends StatefulWidget {
     required this.controller,
     required this.hint,
     this.validator,
+    this.isRequired = false,
   });
 
   @override
@@ -105,6 +118,7 @@ class _AuthPasswordFieldState extends State<AuthPasswordField> {
       hint: widget.hint,
       obscureText: _obscure,
       validator: widget.validator,
+      isRequired: widget.isRequired,
       suffixIcon: IconButton(
         icon: Icon(
           _obscure ? Icons.visibility_off : Icons.visibility,

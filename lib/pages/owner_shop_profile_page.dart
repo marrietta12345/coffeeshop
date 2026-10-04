@@ -6,6 +6,7 @@ import 'package:geocoding/geocoding.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:image_picker/image_picker.dart';
 import '../theme/app_colors.dart';
+import '../widgets/open_status.dart';
 import '../models/coffee_shop.dart';
 import '../utils/owner_shop_service.dart';
 import '../utils/supabase_image_service.dart';
@@ -119,21 +120,8 @@ class OwnerShopProfilePage extends StatelessWidget {
                                 style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.textDark),
                               ),
                             ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: shop.isOpenNow ? const Color(0xFFE7F5E8) : const Color(0xFFF1F1F1),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(
-                                shop.isOpenNow ? 'Active' : 'Closed',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  color: shop.isOpenNow ? const Color(0xFF2E7D32) : AppColors.textGrey,
-                                ),
-                              ),
-                            ),
+                            // Worked out from the schedule — no manual switch.
+                            OpenStatusBadge(hours: shop.hours, tinted: true),
                           ],
                         ),
                         const SizedBox(height: 6),
@@ -155,7 +143,9 @@ class OwnerShopProfilePage extends StatelessWidget {
                             const SizedBox(width: 4),
                             Expanded(
                               child: Text(
-                                shop.address.isEmpty ? 'No address set' : shop.address,
+                                shop.locationLabel.isEmpty
+                                    ? 'No address set'
+                                    : [shop.locationLabel, ?shop.mallDetails].join('\n'),
                                 style: const TextStyle(fontSize: 12.5, color: AppColors.textGrey),
                               ),
                             ),
@@ -187,15 +177,8 @@ class OwnerShopProfilePage extends StatelessWidget {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 24),
-                        const Text('About Us', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.textDark)),
-                        const SizedBox(height: 8),
-                        Text(
-                          shop.description.isEmpty ? 'No description yet. Tap Edit Profile to add one.' : shop.description,
-                          style: const TextStyle(fontSize: 13, color: AppColors.textDark, height: 1.5),
-                        ),
                         if (shop.createdAt != null) ...[
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 24),
                           Text(
                             'Joined on ${_formatDate(shop.createdAt!)}',
                             style: const TextStyle(fontSize: 12, color: AppColors.textGrey),

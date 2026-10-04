@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../theme/app_colors.dart';
 import '../utils/page_transitions.dart';
-import '../widgets/top_banner.dart';
+import '../widgets/settings_widgets.dart';
 import 'welcome_page.dart';
 import 'saved_shops_page.dart';
+import 'account_settings_page.dart';
+import 'visited_cafes_page.dart';
 
 /// Profile tab content. Plain widget (no Scaffold/bottom nav of its own)
 /// — MainNavPage supplies those, which is what makes Explore <-> You
@@ -13,38 +15,27 @@ class YouPage extends StatelessWidget {
   const YouPage({super.key});
 
   void _openAccountSettings(BuildContext context) {
-    // TODO: build a real Account Settings page (name, email, password,
-    // notification preferences, etc.) once that scope is defined.
-    showTopBanner(context, 'Account Settings coming soon!', isSuccess: true);
-  }
-
-  void _showAboutApp(BuildContext context) {
-    showAboutDialog(
-      context: context,
-      applicationName: 'Kafelo',
-      applicationVersion: '1.0.0',
-      applicationIcon: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Image.asset('lib/images/kafelo_logo.png', width: 48, height: 48),
-      ),
-      children: const [
-        SizedBox(height: 12),
-        Text(
-          'Kafelo helps you discover and explore local coffee shops around Butuan City — '
-          'browse menus, read reviews, and find your next favorite cup.',
-          style: TextStyle(fontSize: 13, height: 1.5),
-        ),
-      ],
-    );
+    Navigator.push(context, slideFadeRoute(const AccountSettingsPage()));
   }
 
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
+    // userChanges() re-emits after a name/photo edit in Personal
+    // Information, so the header updates without a restart.
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.userChanges(),
+      initialData: FirebaseAuth.instance.currentUser,
+      builder: (context, snapshot) => _buildProfile(context, snapshot.data),
+    );
+  }
+
+  Widget _buildProfile(BuildContext context, User? user) {
     final name = (user?.displayName?.isNotEmpty ?? false)
         ? user!.displayName!
         : 'Coffee Lover';
     final email = user?.email ?? '';
+    final photoUrl = user?.photoURL;
+    final hasPhoto = photoUrl != null && photoUrl.isNotEmpty;
 
     return Container(
       color: AppColors.darkBackground,
@@ -83,7 +74,8 @@ class YouPage extends StatelessWidget {
                   CircleAvatar(
                     radius: 32,
                     backgroundColor: AppColors.primaryBrown.withOpacity(0.2),
-                    child: const Icon(Icons.person_rounded, color: AppColors.primaryBrown, size: 32),
+                    backgroundImage: hasPhoto ? NetworkImage(photoUrl) : null,
+                    child: hasPhoto ? null : const Icon(Icons.person_rounded, color: AppColors.primaryBrown, size: 32),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -109,21 +101,21 @@ class YouPage extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 32),
-              _MenuTile(
+              ProfileMenuTile(
+                icon: Icons.local_cafe_outlined,
+                label: 'Visited Cafés',
+                onTap: () => Navigator.push(context, slideFadeRoute(const VisitedCafesPage())),
+              ),
+              ProfileMenuTile(
                 icon: Icons.favorite_border_rounded,
                 label: 'My Favorites',
                 onTap: () => Navigator.push(context, slideUpRoute(const SavedShopsPage())),
               ),
-              const _MenuTile(icon: Icons.rate_review_outlined, label: 'My Reviews'),
-              _MenuTile(
+              const ProfileMenuTile(icon: Icons.rate_review_outlined, label: 'My Reviews'),
+              ProfileMenuTile(
                 icon: Icons.settings_outlined,
                 label: 'Account Settings',
                 onTap: () => _openAccountSettings(context),
-              ),
-              _MenuTile(
-                icon: Icons.info_outline_rounded,
-                label: 'About the App',
-                onTap: () => _showAboutApp(context),
               ),
               const Spacer(),
               SizedBox(
@@ -153,39 +145,6 @@ class YouPage extends StatelessWidget {
               const SizedBox(height: 16),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _MenuTile extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback? onTap;
-
-  const _MenuTile({required this.icon, required this.label, this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.06),
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: AppColors.primaryBrown, size: 20),
-            const SizedBox(width: 14),
-            Text(label, style: const TextStyle(color: Colors.white, fontSize: 14)),
-            const Spacer(),
-            const Icon(Icons.chevron_right_rounded, color: Colors.white38),
-          ],
         ),
       ),
     );

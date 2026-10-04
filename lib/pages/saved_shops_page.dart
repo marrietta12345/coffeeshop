@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../theme/app_colors.dart';
 import '../models/coffee_shop.dart';
-import '../data/mock_coffee_shops.dart';
 import '../utils/saved_shops_service.dart';
 import '../utils/page_transitions.dart';
 import '../widgets/shop_photo.dart';
@@ -15,11 +14,6 @@ class SavedShopsPage extends StatelessWidget {
   const SavedShopsPage({super.key});
 
   Future<CoffeeShop?> _resolveShop(String shopId) async {
-    // Check bundled demo shops first (no network needed).
-    for (final shop in mockCoffeeShops) {
-      if (shop.id == shopId) return shop;
-    }
-    // Otherwise look it up in the real shops collection.
     try {
       final doc = await FirebaseFirestore.instance.collection('shops').doc(shopId).get();
       if (doc.exists) return CoffeeShop.fromFirestore(doc);

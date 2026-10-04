@@ -3,10 +3,9 @@ import '../theme/app_colors.dart';
 import '../models/coffee_shop.dart';
 
 /// The single place every screen renders a shop's photo. If the shop
-/// hasn't uploaded any real photos yet (photoCount == 0, true for every
-/// newly-created owner shop until a real upload feature exists), this
-/// shows an honest branded placeholder — NOT a random stock photo — so
-/// customers never see an image the shop never actually provided.
+/// hasn't uploaded that photo, this shows an honest branded placeholder —
+/// NOT a random stock photo — so customers never see an image the shop
+/// never actually provided.
 class ShopPhoto extends StatelessWidget {
   final CoffeeShop shop;
   final int index;
@@ -49,35 +48,43 @@ class ShopPhoto extends StatelessWidget {
       );
     }
 
-    // No real photos — for mock demo shops only, show the seeded
-    // placeholder photo. Real shops with nothing uploaded get the
-    // honest "no photo" placeholder instead.
-    if (shop.photoUrls.isEmpty && shop.ownerId == null && index < shop.photoCount) {
-      return Image.network(
-        shop.coverPhotoUrl(index),
-        width: width,
-        height: height,
-        fit: BoxFit.cover,
-        loadingBuilder: (context, child, progress) {
-          if (progress == null) return child;
-          return Container(
-            width: width,
-            height: height,
-            color: AppColors.primaryBrown.withOpacity(0.1),
-            child: const Center(
-              child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primaryBrown),
-              ),
-            ),
-          );
-        },
-        errorBuilder: (context, error, stackTrace) => _NoPhotoPlaceholder(width: width, height: height),
-      );
-    }
-
     return _NoPhotoPlaceholder(width: width, height: height);
+  }
+}
+
+/// A café's cover image for visual lists (Collections): its uploaded
+/// banner, else its first gallery photo, else its logo — whatever the
+/// shop already has — falling back to the branded placeholder. Nothing
+/// new needs to be uploaded.
+class ShopCoverImage extends StatelessWidget {
+  final CoffeeShop shop;
+  final double width;
+  final double height;
+
+  const ShopCoverImage({super.key, required this.shop, required this.width, required this.height});
+
+  String? get _coverUrl {
+    for (final url in [shop.bannerUrl, if (shop.photoUrls.isNotEmpty) shop.photoUrls.first, shop.logoUrl]) {
+      if (url != null && url.isNotEmpty) return url;
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final url = _coverUrl;
+    if (url == null) return _NoPhotoPlaceholder(width: width, height: height);
+    return Image.network(
+      url,
+      width: width,
+      height: height,
+      fit: BoxFit.cover,
+      loadingBuilder: (context, child, progress) {
+        if (progress == null) return child;
+        return Container(width: width, height: height, color: AppColors.primaryBrown.withOpacity(0.1));
+      },
+      errorBuilder: (context, error, stackTrace) => _NoPhotoPlaceholder(width: width, height: height),
+    );
   }
 }
 
