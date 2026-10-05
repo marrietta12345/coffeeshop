@@ -248,22 +248,19 @@ class _ExplorePageState extends State<ExplorePage> {
         const Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.textDark)),
         const SizedBox(height: 12),
         _EmptyNote(
-          'Set your Coffee Preferences to get café picks made for you.',
-          actionLabel: 'Set preferences',
+          'Set your coffee preferences to get personalized recommendations.',
+          actionLabel: 'Set Preferences',
           onAction: () => Navigator.of(context).push(slideFadeRoute(const CoffeePreferencesPage())),
         ),
       ];
     }
     final recommendations = _recommendations;
-    final matchesById = {for (final r in recommendations) r.shop.id: r.score};
+    final percentById = {for (final r in recommendations) r.shop.id: r.percent};
     return _shopCarouselSection(
       title: title,
       shops: [for (final r in recommendations) r.shop],
       emptyText: 'No cafés match your Coffee Preferences yet.',
-      cardLabel: (shop, distance) {
-        final n = matchesById[shop.id] ?? 0;
-        return '$n ${n == 1 ? 'match' : 'matches'} · $distance';
-      },
+      cardLabel: (shop, distance) => '${percentById[shop.id] ?? 0}% Match for You',
     );
   }
 
@@ -300,7 +297,7 @@ class _ExplorePageState extends State<ExplorePage> {
         _EmptyNote(emptyText)
       else
         SizedBox(
-          height: 172,
+          height: ShopMiniCard.heightFor(150, MediaQuery.textScalerOf(context)),
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: shops.length,
@@ -414,7 +411,7 @@ class _BestSellerRow extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(10),
-              child: MenuItemImage(item: item, shop: shop, fallbackIndex: 0, width: 56, height: 56),
+              child: MenuItemImage(item: item, shop: shop, fallbackIndex: 0, width: 56, height: 42),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -579,10 +576,10 @@ class _SearchSuggestionsCard extends StatelessWidget {
             ClipRRect(
               borderRadius: BorderRadius.circular(10),
               child: shop != null
-                  ? ShopPhoto(shop: shop, width: 44, height: 44)
+                  ? ShopPhoto(shop: shop, width: 52, height: 39)
                   : Container(
-                      width: 44,
-                      height: 44,
+                      width: 52,
+                      height: 39,
                       color: AppColors.primaryBrown.withOpacity(0.12),
                       child: Icon(info?.$1 ?? Icons.search_rounded, color: AppColors.primaryBrown, size: 22),
                     ),

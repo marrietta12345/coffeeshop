@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:local_based_coffee_shops_mobile_application/models/coffee_shop.dart';
 
-CoffeeShop shop({String address = 'A.D. Curato St, Butuan City', String? mall, String? floor, String? landmark}) {
+CoffeeShop shop({String address = 'A.D. Curato St, Butuan City', String? mall, String? floor, String? unit, String? landmark}) {
   return CoffeeShop(
     id: 'x',
     name: 'Test Café',
@@ -15,6 +15,7 @@ CoffeeShop shop({String address = 'A.D. Curato St, Butuan City', String? mall, S
     category: ShopCategory.coffee,
     mallName: mall,
     mallFloor: floor,
+    mallUnit: unit,
     mallLandmark: landmark,
   );
 }
@@ -71,5 +72,27 @@ void main() {
     expect(s.isInMall, isFalse);
     expect(s.locationLabel, 'A.D. Curato St, Butuan City');
     expect(s.mallDetails, isNull);
+  });
+
+  test('unit numbers read as "Unit ..." unless they already name the space', () {
+    expect(CoffeeShop.formatUnit('204'), 'Unit 204');
+    expect(CoffeeShop.formatUnit('Unit 204'), 'Unit 204');
+    expect(CoffeeShop.formatUnit('B12'), 'Unit B12');
+    expect(CoffeeShop.formatUnit('GF-12'), 'Unit GF-12');
+    expect(CoffeeShop.formatUnit('Stall 3B'), 'Stall 3B');
+    expect(CoffeeShop.formatUnit('  '), isNull);
+  });
+
+  test('details page lines: floor and unit, with the landmark separately', () {
+    final s = shop(mall: 'Gaisano Mall Butuan', floor: '2nd Floor', unit: '204', landmark: 'Near the Food Court');
+    expect(s.mallFloorAndUnit, '2nd Floor · Unit 204');
+    expect(s.mallDetails, '2nd Floor · Unit 204 · Near the Food Court');
+    expect(shop(mall: 'Gaisano Mall Butuan', floor: '2nd Floor', landmark: 'Near the Cinema').mallFloorAndUnit, '2nd Floor');
+    expect(shop(mall: 'Example Mall', floor: '10th Floor', landmark: 'Near the Main Entrance').mallDetails,
+        '10th Floor · Near the Main Entrance');
+  });
+
+  test('a standalone café has no floor or unit lines', () {
+    expect(shop(floor: '2nd Floor', unit: '204').mallFloorAndUnit, isNull);
   });
 }

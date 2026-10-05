@@ -85,7 +85,7 @@ class _SaveToCollectionSheetState extends State<_SaveToCollectionSheet> {
                   children: [
                     ClipRRect(
                       borderRadius: BorderRadius.circular(10),
-                      child: ShopCoverImage(shop: shop, width: 44, height: 44),
+                      child: ShopCoverImage(shop: shop, width: 52, height: 39),
                     ),
                     const SizedBox(width: 12),
                     Expanded(

@@ -253,8 +253,8 @@ class ShopListRow extends StatelessWidget {
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: useCoverImage
-                  ? ShopCoverImage(shop: shop, width: 56, height: 56)
-                  : ShopPhoto(shop: shop, width: 56, height: 56),
+                  ? ShopCoverImage(shop: shop, width: 64, height: 48)
+                  : ShopPhoto(shop: shop, width: 64, height: 48),
             ),
             const SizedBox(width: 12),
             Expanded(

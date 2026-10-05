@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 
 /// Five-tab bottom bar for the Coffee Shop Owner side of the app —
-/// Dashboard, Menu, Best Sellers, Reviews, Profile. Same visual pattern
+/// Dashboard, Menu, Popular, Reviews, Profile. Same visual pattern
 /// as the customer-side CustomBottomNav for consistency.
 class OwnerBottomNav extends StatelessWidget {
   final int selectedIndex;
@@ -29,7 +29,7 @@ class OwnerBottomNav extends StatelessWidget {
           children: [
             _NavItem(icon: Icons.dashboard_rounded, label: 'Dashboard', selected: selectedIndex == 0, onTap: () => onTabSelected(0)),
             _NavItem(icon: Icons.restaurant_menu_rounded, label: 'Menu', selected: selectedIndex == 1, onTap: () => onTabSelected(1)),
-            _NavItem(icon: Icons.star_rounded, label: 'Best Sellers', selected: selectedIndex == 2, onTap: () => onTabSelected(2)),
+            _NavItem(icon: Icons.star_rounded, label: 'Popular', selected: selectedIndex == 2, onTap: () => onTabSelected(2)),
             _NavItem(icon: Icons.rate_review_rounded, label: 'Reviews', selected: selectedIndex == 3, onTap: () => onTabSelected(3)),
             _NavItem(icon: Icons.person_rounded, label: 'Profile', selected: selectedIndex == 4, onTap: () => onTabSelected(4)),
           ],

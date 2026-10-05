@@ -69,26 +69,61 @@ void main() {
       expect(find.text('Use Current Location'), findsOneWidget);
     });
 
+    Future<void> chooseMall(WidgetTester tester) async {
+      await tester.ensureVisible(find.text('Inside a Mall'));
+      await tester.tap(find.text('Inside a Mall'));
+      await tester.pump();
+    }
+
     testWidgets('Inside a Mall shows mall fields and hides the address', (tester) async {
       await _pumpForm(tester);
-      await tester.ensureVisible(find.text('Inside a Mall'));
-      await tester.tap(find.text('Inside a Mall'));
-      await tester.pump();
+      await chooseMall(tester);
       expect(find.text('Mall Name'), findsOneWidget);
       expect(find.text('Floor Level'), findsOneWidget);
+      expect(find.text('Unit / Store Number'), findsOneWidget);
       expect(find.text('Specific Location / Landmark'), findsOneWidget);
       expect(find.text('Café Address'), findsNothing);
+      // Only the short list of floors, plus Other.
+      for (final floor in ['Ground Floor', '1st Floor', '2nd Floor', '3rd Floor', '4th Floor', 'Other']) {
+        expect(find.text(floor), findsOneWidget);
+      }
+      expect(find.text('5th Floor'), findsNothing);
     });
 
-    testWidgets('mall name and floor are required; landmark is optional', (tester) async {
+    testWidgets('mall name, floor and landmark are required; unit is optional', (tester) async {
       await _pumpForm(tester);
-      await tester.ensureVisible(find.text('Inside a Mall'));
-      await tester.tap(find.text('Inside a Mall'));
-      await tester.pump();
-      await tester.enterText(_field('Specific Location / Landmark'), '');
+      await chooseMall(tester);
       await _submit(tester);
-      // name, email, phone, password, shop name, mall name, floor level
+      // name, email, phone, password, shop name, mall name, floor level, landmark
+      expect(find.text(FormValidators.requiredMessage), findsNWidgets(8));
+    });
+
+    testWidgets('choosing Other asks for the floor, and it is required', (tester) async {
+      await _pumpForm(tester);
+      await chooseMall(tester);
+      expect(find.text('Enter Floor Level'), findsNothing);
+      await tester.ensureVisible(find.text('Other'));
+      await tester.tap(find.text('Other'));
+      await tester.pump();
+      expect(find.text('Enter Floor Level'), findsOneWidget);
+      expect(find.text('e.g., 6th Floor, 10th Floor, Mezzanine'), findsOneWidget);
+      await _submit(tester);
+      // the 5 account/shop fields, mall name, custom floor, landmark
+      expect(find.text(FormValidators.requiredMessage), findsNWidgets(8));
+      await tester.enterText(_field('Enter Floor Level'), '10th Floor');
+      await tester.pump();
       expect(find.text(FormValidators.requiredMessage), findsNWidgets(7));
+    });
+
+    testWidgets('switching back to Standalone hides the mall fields', (tester) async {
+      await _pumpForm(tester);
+      await chooseMall(tester);
+      await tester.tap(find.text('Standalone / Street Location'));
+      await tester.pump();
+      expect(find.text('Mall Name'), findsNothing);
+      expect(find.text('Floor Level'), findsNothing);
+      expect(find.text('Café Address'), findsOneWidget);
+      expect(find.text('Enter complete café address'), findsOneWidget);
     });
 
     testWidgets('submitting without a GPS location shows an error and does not continue', (tester) async {

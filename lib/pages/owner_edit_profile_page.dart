@@ -6,12 +6,14 @@ import '../models/coffee_shop.dart';
 import '../widgets/auth_text_field.dart';
 import '../widgets/category_chip.dart';
 import '../widgets/top_banner.dart';
+import '../widgets/shop_location_section.dart';
 import '../utils/form_validators.dart';
 import '../utils/user_profile_service.dart';
 import '../utils/online_links.dart';
 
 /// Edit the shop's basic profile info — name, description, phone,
-/// Online Presence (website + social links), (optionally) the mall it's inside, and its Café Features
+/// Online Presence (website + social links), its Location (type, mall details,
+/// address, GPS — same fields and rules as sign-up), and its Café Features
 /// (coffee types, atmosphere, must-haves) that customers' Coffee
 /// Preferences are matched against for "Recommended for You". Writes
 /// straight to the shop's Firestore document.
@@ -33,9 +35,7 @@ class _OwnerEditProfilePageState extends State<OwnerEditProfilePage> {
   late final TextEditingController _facebookController;
   late final TextEditingController _instagramController;
   late final TextEditingController _tiktokController;
-  late final TextEditingController _mallNameController;
-  late final TextEditingController _mallFloorController;
-  late final TextEditingController _mallLandmarkController;
+  late final ShopLocationController _location = ShopLocationController(shop: widget.shop);
   late final Set<String> _coffeeTypes = {...widget.shop.coffeeTypes};
   late final Set<String> _atmospheres = {...widget.shop.atmospheres};
   late final Set<String> _amenities = {...widget.shop.amenities};
@@ -55,9 +55,6 @@ class _OwnerEditProfilePageState extends State<OwnerEditProfilePage> {
     _facebookController = TextEditingController(text: widget.shop.facebookUrl ?? '');
     _instagramController = TextEditingController(text: widget.shop.instagramUrl ?? '');
     _tiktokController = TextEditingController(text: widget.shop.tiktokUrl ?? '');
-    _mallNameController = TextEditingController(text: widget.shop.mallName ?? '');
-    _mallFloorController = TextEditingController(text: widget.shop.mallFloor ?? '');
-    _mallLandmarkController = TextEditingController(text: widget.shop.mallLandmark ?? '');
     if ((widget.shop.phoneNumber ?? '').trim().isEmpty) _loadSignUpPhone();
   }
 
@@ -105,21 +102,24 @@ class _OwnerEditProfilePageState extends State<OwnerEditProfilePage> {
     _facebookController.dispose();
     _instagramController.dispose();
     _tiktokController.dispose();
-    _mallNameController.dispose();
-    _mallFloorController.dispose();
-    _mallLandmarkController.dispose();
+    _location.dispose();
     super.dispose();
   }
 
   Future<void> _save() async {
-    if (!_formKey.currentState!.validate()) return;
+    final fieldsOk = _formKey.currentState!.validate();
+    final gpsOk = _location.validateGps();
+    // Field errors show under each field; a missing GPS spot also gets a banner.
+    if (!fieldsOk) return;
+    if (!gpsOk) {
+      showTopBanner(context, "Please capture your café's GPS location.", isSuccess: false);
+      return;
+    }
     setState(() => _isSaving = true);
 
-    String? optional(TextEditingController c) => c.text.trim().isEmpty ? null : c.text.trim();
-    // Floor and landmark only mean something inside a mall.
-    final mallName = optional(_mallNameController);
-
     try {
+      // Location type, mall details, address and the café's own GPS spot.
+      final locationFields = await _location.toFirestore();
       await FirebaseFirestore.instance.collection('shops').doc(widget.shop.id).set({
         'name': _nameController.text.trim(),
         'description': _descriptionController.text.trim(),
@@ -131,10 +131,7 @@ class _OwnerEditProfilePageState extends State<OwnerEditProfilePage> {
         'facebookUrl': OnlineLinks.toStored(_facebookController.text),
         'instagramUrl': OnlineLinks.toStored(_instagramController.text),
         'tiktokUrl': OnlineLinks.toStored(_tiktokController.text),
-        'locationType': mallName == null ? 'standalone' : 'mall',
-        'mallName': mallName,
-        'mallFloor': mallName == null ? null : optional(_mallFloorController),
-        'mallLandmark': mallName == null ? null : optional(_mallLandmarkController),
+        ...locationFields,
         'coffeeTypes': _coffeeTypes.toList(),
         'atmospheres': _atmospheres.toList(),
         'amenities': _amenities.toList(),
@@ -251,23 +248,7 @@ class _OwnerEditProfilePageState extends State<OwnerEditProfilePage> {
                       const SizedBox(height: 28),
                       const AuthSectionLabel('Location'),
                       const SizedBox(height: 16),
-                      AuthTextField(
-                        label: 'Mall Name',
-                        controller: _mallNameController,
-                        hint: 'Optional — only if your shop is inside a mall',
-                      ),
-                      const SizedBox(height: 18),
-                      AuthTextField(
-                        label: 'Floor Level',
-                        controller: _mallFloorController,
-                        hint: 'Optional — e.g. 2nd Floor',
-                      ),
-                      const SizedBox(height: 18),
-                      AuthTextField(
-                        label: 'Nearby Landmark',
-                        controller: _mallLandmarkController,
-                        hint: 'Optional — e.g. Near the cinema entrance',
-                      ),
+                      ShopLocationSection(controller: _location),
                       const SizedBox(height: 28),
                       const AuthSectionLabel('Café Features'),
                       const SizedBox(height: 4),

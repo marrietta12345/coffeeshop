@@ -136,7 +136,7 @@ class _SavedShopRow extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: ShopPhoto(shop: shop, width: 56, height: 56),
+              child: ShopPhoto(shop: shop, width: 64, height: 48),
             ),
             const SizedBox(width: 12),
             Expanded(

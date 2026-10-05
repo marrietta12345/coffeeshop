@@ -48,7 +48,8 @@ class OnlineActionButton extends StatelessWidget {
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (sheetContext) => SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
+          // Scrolls on short (landscape) screens.
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
           child: Column(
             mainAxisSize: MainAxisSize.min,

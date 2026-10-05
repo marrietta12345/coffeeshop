@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/coffee_shop.dart';
 import '../utils/saved_shops_service.dart';
 import '../utils/shop_stats_service.dart';
+import '../utils/shop_activity_service.dart';
 import 'top_banner.dart';
 
 /// A heart toggle that saves/unsaves a shop to the signed-in user's
@@ -48,6 +49,7 @@ class _FavoriteHeartButtonState extends State<FavoriteHeartButton> {
       // Only shops with an owner have a live shops/{id} doc to update.
       if (widget.shop.ownerId != null) {
         ShopStatsService.adjustFavoritesCount(widget.shop.id, nowSaved ? 1 : -1);
+        ShopActivityService.setFavorited(widget.shop.id, nowSaved);
       }
 
       showTopBanner(

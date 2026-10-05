@@ -1,9 +1,11 @@
+import 'dart:math' as math;
 import 'dart:async';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../utils/map_pin_spread.dart';
 import '../theme/app_colors.dart';
 import '../models/coffee_shop.dart';
 import '../widgets/coffee_search_bar.dart';
@@ -317,6 +319,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       ..._filteredShops.where((s) => s.id != _highlightedShopId),
       ..._filteredShops.where((s) => s.id == _highlightedShopId),
     ];
+    final pinOffsets = MapPinSpread.offsets(_filteredShops);
+    // Landscape phones are short — keep the Nearby panel to its title row.
+    final compactPanel = MediaQuery.sizeOf(context).height < 520;
 
     return Stack(
       children: [
@@ -351,19 +356,29 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   ),
                 ...shopsForMarkers.map((shop) {
                   final isHighlighted = shop.id == _highlightedShopId;
+                  // Cafés sharing a spot (e.g. same mall floor) are drawn
+                  // side by side so each pin stays tappable.
+                  final shift = pinOffsets[shop.id] ?? Offset.zero;
+                  final pin = GestureDetector(
+                    onTap: () {
+                      _hideSuggestions();
+                      _setHighlightedShop(shop.id);
+                      _showPinPreview(shop);
+                    },
+                    child: _ShopPin(highlighted: isHighlighted, pulse: isHighlighted ? _pulseController : null),
+                  );
                   return Marker(
                     point: LatLng(shop.latitude, shop.longitude),
-                    width: 54,
-                    height: 66,
+                    width: 54 + 2 * shift.dx.abs(),
+                    height: 66 + shift.dy.abs(),
                     alignment: Alignment.topCenter,
-                    child: GestureDetector(
-                      onTap: () {
-                        _hideSuggestions();
-                        _setHighlightedShop(shop.id);
-                        _showPinPreview(shop);
-                      },
-                      child: _ShopPin(highlighted: isHighlighted, pulse: isHighlighted ? _pulseController : null),
-                    ),
+                    child: shift == Offset.zero
+                        ? pin
+                        : Stack(
+                            children: [
+                              Positioned(left: shift.dx.abs() + shift.dx, top: 0, width: 54, height: 66, child: pin),
+                            ],
+                          ),
                   );
                 }),
               ],
@@ -373,7 +388,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         // Recenter-to-my-location button, floating above the nearby panel.
         Positioned(
           right: 18,
-          bottom: 232,
+          bottom: compactPanel ? MediaQuery.paddingOf(context).bottom + 76 : 232,
           child: Material(
             color: Colors.white,
             shape: const CircleBorder(),
@@ -439,6 +454,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     ),
                   ],
                 ),
+                // Short (landscape) screens: just the title and View all, so
+                // the map stays visible; the cards are one tap away.
+                if (!compactPanel) ...[
                 const SizedBox(height: 3),
                 Text(
                   'Explore the best coffee spots near you.',
@@ -446,7 +464,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 ),
                 const SizedBox(height: 12),
                 SizedBox(
-                  height: 148,
+                  height: ShopMiniCard.heightFor(130, MediaQuery.textScalerOf(context)),
                   child: _isLocating
                       ? const Center(
                           child: SizedBox(
@@ -483,6 +501,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                   },
                                 ),
                 ),
+                ],
               ],
             ),
           ),
@@ -746,7 +765,8 @@ class _SearchSuggestionsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      constraints: const BoxConstraints(maxHeight: 340),
+      // Never taller than half the screen (landscape phones are short).
+      constraints: BoxConstraints(maxHeight: math.min(340, MediaQuery.sizeOf(context).height * 0.5)),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -791,7 +811,7 @@ class _SearchSuggestionsCard extends StatelessWidget {
                         children: [
                           ClipRRect(
                             borderRadius: BorderRadius.circular(10),
-                            child: ShopPhoto(shop: shop, width: 44, height: 44),
+                            child: ShopPhoto(shop: shop, width: 52, height: 39),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -898,14 +918,16 @@ class _MapPinPreviewCard extends StatelessWidget {
         ),
       ),
       clipBehavior: Clip.antiAlias,
-      child: Column(
+      // Scrolls on short (landscape) screens instead of overflowing.
+      child: SingleChildScrollView(
+        child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Stack(
             children: [
               AspectRatio(
                 aspectRatio: 16 / 9,
-                child: ShopPhoto(shop: shop, width: double.infinity, height: double.infinity),
+                child: ShopBanner(shop: shop, width: double.infinity, height: double.infinity),
               ),
               Positioned(
                 top: 12,
@@ -923,6 +945,33 @@ class _MapPinPreviewCard extends StatelessWidget {
                   shop.name,
                   style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: AppColors.textDark),
                 ),
+                // Mall cafés: which mall, then floor · unit · landmark.
+                if (shop.isInMall) ...[
+                  const SizedBox(height: 4),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Padding(
+                        padding: EdgeInsets.only(top: 1),
+                        child: Icon(Icons.local_mall_rounded, size: 15, color: AppColors.primaryBrown),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Inside ${shop.mallName!.trim()}',
+                              style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.textDark),
+                            ),
+                            if (shop.mallDetails != null)
+                              Text(shop.mallDetails!, style: const TextStyle(fontSize: 12, color: AppColors.textGrey)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
                 const SizedBox(height: 6),
                 Row(
                   children: [
@@ -959,6 +1008,7 @@ class _MapPinPreviewCard extends StatelessWidget {
           ),
         ],
       ),
+      ),
     );
   }
 }
@@ -984,7 +1034,7 @@ class _ShopListCard extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(14),
-              child: ShopPhoto(shop: shop, width: 60, height: 60),
+              child: ShopPhoto(shop: shop, width: 64, height: 48),
             ),
             const SizedBox(width: 12),
             Expanded(

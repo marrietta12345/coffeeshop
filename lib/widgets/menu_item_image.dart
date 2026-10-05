@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../models/coffee_shop.dart';
 import '../models/menu_item.dart';
-import 'shop_photo.dart';
+import 'fitted_image.dart';
 
-/// Displays a menu item's photo — a real uploaded image (Supabase
-/// Storage) if the item has one, otherwise falls back to the shop's
-/// general photo/placeholder so the layout never looks broken while menu
-/// photo uploads aren't built into any UI yet.
+/// Displays a menu item's photo — the real uploaded image (Supabase
+/// Storage), shown whole inside its box (never stretched or cropped), or a
+/// plain coffee-cup tile when it has none (never a stand-in photo).
 class MenuItemImage extends StatelessWidget {
   final MenuItem item;
   final CoffeeShop shop;
@@ -27,19 +26,15 @@ class MenuItemImage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (item.imageUrl != null && item.imageUrl!.isNotEmpty) {
-      return Image.network(
-        item.imageUrl!,
+      return FittedImage.network(item.imageUrl!, width: width, height: height, fallback: _placeholder());
+    }
+    return _placeholder();
+  }
+
+  Widget _placeholder() => Container(
         width: width,
         height: height,
-        fit: BoxFit.cover,
-        loadingBuilder: (context, child, progress) {
-          if (progress == null) return child;
-          return Container(width: width, height: height, color: AppColors.primaryBrown.withOpacity(0.1));
-        },
-        errorBuilder: (context, error, stackTrace) =>
-            ShopPhoto(shop: shop, index: fallbackIndex, width: width, height: height),
+        color: AppColors.primaryBrown.withOpacity(0.12),
+        child: const Center(child: Icon(Icons.local_cafe_rounded, color: AppColors.primaryBrown, size: 26)),
       );
-    }
-    return ShopPhoto(shop: shop, index: fallbackIndex, width: width, height: height);
-  }
 }

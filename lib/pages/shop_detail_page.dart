@@ -1,7 +1,15 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'coffee_preferences_page.dart';
+import '../models/coffee_preferences.dart';
+import '../utils/user_profile_service.dart';
+import '../utils/recommendations.dart';
+import '../widgets/cafe_vibe.dart';
+import '../widgets/fitted_image.dart';
+import '../widgets/shop_gallery.dart';
 import '../theme/app_colors.dart';
 import '../models/coffee_shop.dart';
 import '../models/menu_item.dart';
@@ -14,14 +22,19 @@ import '../widgets/online_action_button.dart';
 import '../widgets/open_status.dart';
 import '../models/operating_hours.dart';
 import '../utils/online_links.dart';
-import '../utils/shop_stats_service.dart';
+import '../utils/shop_activity_service.dart';
 import '../utils/review_service.dart';
+import '../utils/menu_service.dart';
 import '../utils/visited_shops_service.dart';
 import 'add_review_page.dart';
 import 'save_to_collection_sheet.dart';
 import '../utils/collections_service.dart';
 import '../models/shop_collection.dart';
 import 'best_sellers_page.dart';
+import 'coffee_detail_page.dart';
+import 'directions_page.dart';
+import '../widgets/coffee_badges.dart';
+import '../widgets/coffee_review_widgets.dart' show OwnerResponseBox;
 import '../utils/page_transitions.dart';
 
 class ShopDetailPage extends StatefulWidget {
@@ -37,13 +50,59 @@ class _ShopDetailPageState extends State<ShopDetailPage> {
   // This shop's reviews, kept live from shops/{id}/reviews.
   List<Review> _reviews = [];
   StreamSubscription<List<Review>>? _reviewsSubscription;
-  late List<MenuItem> _menuItems;
-  final Set<String> _likedItems = {}; // item names liked this session
+  // This shop's coffee menu, kept live from shops/{id}/menu.
+  List<MenuItem> _menuItems = [];
+  StreamSubscription<List<MenuItem>>? _menuSubscription;
+  final Set<String> _likedItems = {}; // ids of coffees this customer hearted
+  final Set<String> _likeChecked = {}; // ids whose heart state was loaded
+  final Set<String> _likeBusy = {};
+  // The café's own record, kept live so owner edits (description, gallery,
+  // name, hours…) show without reopening the page.
+  CoffeeShop? _liveShop;
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _shopSubscription;
+
+  CoffeeShop get _shop => _liveShop ?? widget.shop;
+  // The customer's Coffee Preferences, kept live for the match pill.
+  CoffeePreferences? _prefs;
+  StreamSubscription<Map<String, dynamic>>? _prefsSubscription;
+
+  bool get _isOwnShop => widget.shop.ownerId != null && widget.shop.ownerId == FirebaseAuth.instance.currentUser?.uid;
+
+  /// Follows the signed-in customer's own Coffee Preferences, so the match
+  /// always uses the latest ones (not for the café's own owner — there's no
+  /// match to show them).
+  void _watchPreferences() {
+    if (FirebaseAuth.instance.currentUser == null || _isOwnShop) return;
+    _prefsSubscription = UserProfileService.profileStream().listen(
+      (profile) {
+        if (mounted) setState(() => _prefs = CoffeePreferences.fromMap(profile['coffeePreferences'] as Map<String, dynamic>?));
+      },
+      onError: (Object e) => debugPrint('Coffee preferences unavailable: $e'),
+    );
+  }
+
+  void _openPreferences() {
+    Navigator.push(context, slideUpRoute(const CoffeePreferencesPage()));
+  }
 
   @override
   void initState() {
     super.initState();
-    _menuItems = List.of(widget.shop.menu);
+    _watchPreferences();
+    _shopSubscription = FirebaseFirestore.instance.collection('shops').doc(widget.shop.id).snapshots().listen(
+      (doc) {
+        if (mounted && doc.exists) setState(() => _liveShop = CoffeeShop.fromFirestore(doc));
+      },
+      onError: (Object error) => debugPrint('Shop stream error: $error'),
+    );
+    _menuSubscription = MenuService.menuStream(widget.shop.id).listen(
+      (items) {
+        if (!mounted) return;
+        setState(() => _menuItems = items);
+        _loadLikes(items);
+      },
+      onError: (Object error) => debugPrint('Menu stream error: $error'),
+    );
     _reviewsSubscription = ReviewService.reviewsStream(widget.shop.id).listen(
       (reviews) {
         if (mounted) setState(() => _reviews = reviews);
@@ -51,12 +110,12 @@ class _ShopDetailPageState extends State<ShopDetailPage> {
       onError: (Object error) => debugPrint('Reviews stream error: $error'),
     );
 
-    // Track a real profile view — skip counting the shop's own owner
+    // Track a unique profile view — skip counting the shop's own owner
     // browsing their own listing.
     final shop = widget.shop;
     final currentUid = FirebaseAuth.instance.currentUser?.uid;
     if (shop.ownerId != null && shop.ownerId != currentUid) {
-      ShopStatsService.recordView(shop.id);
+      ShopActivityService.recordView(shop.id);
     }
     // Add to the viewer's Visited Cafés history — celebrating a
     // brand-new discovery (Daily Discovery + streak).
@@ -83,37 +142,62 @@ class _ShopDetailPageState extends State<ShopDetailPage> {
   @override
   void dispose() {
     _reviewsSubscription?.cancel();
+    _menuSubscription?.cancel();
+    _shopSubscription?.cancel();
+    _prefsSubscription?.cancel();
     super.dispose();
   }
 
   double get _averageRating {
-    if (_reviews.isEmpty) return widget.shop.rating;
+    if (_reviews.isEmpty) return _shop.rating;
     final sum = _reviews.fold<double>(0, (acc, r) => acc + r.rating);
     return sum / _reviews.length;
   }
 
-  void _toggleLike(MenuItem item) {
-    setState(() {
-      if (_likedItems.contains(item.name)) {
-        _likedItems.remove(item.name);
-        item.likes--;
-      } else {
-        _likedItems.add(item.name);
-        item.likes++;
-      }
-    });
+  /// Loads which newly seen coffees this customer has already hearted.
+  Future<void> _loadLikes(List<MenuItem> items) async {
+    final unchecked = items.where((i) => !_likeChecked.contains(i.id)).toList();
+    if (unchecked.isEmpty || _isOwnShop) return;
+    _likeChecked.addAll(unchecked.map((i) => i.id));
+    try {
+      final liked = await MenuService.likedItemIds(widget.shop.id, unchecked);
+      if (mounted) setState(() => _likedItems.addAll(liked));
+    } catch (e) {
+      _likeChecked.removeAll(unchecked.map((i) => i.id));
+      debugPrint('Loading menu hearts failed: $e');
+    }
   }
 
-  Future<void> _openDirections() async {
-    final shop = widget.shop;
-    final uri = Uri.parse(
-      'https://www.google.com/maps/dir/?api=1&destination=${shop.latitude},${shop.longitude}',
-    );
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  /// Hearts / un-hearts a coffee — saved, one heart per customer.
+  Future<void> _toggleLike(MenuItem item) async {
+    if (_isOwnShop) {
+      showTopBanner(context, "You can't heart your own coffee.", isSuccess: false);
+      return;
+    }
+    if (!_likeBusy.add(item.id)) return;
+    final wasLiked = _likedItems.contains(item.id);
+    setState(() => wasLiked ? _likedItems.remove(item.id) : _likedItems.add(item.id));
+    try {
+      final nowLiked = await MenuService.toggleLike(item);
+      if (mounted) setState(() => nowLiked ? _likedItems.add(item.id) : _likedItems.remove(item.id));
+    } catch (e) {
+      debugPrint('Menu heart failed: $e');
+      if (!mounted) return;
+      setState(() => wasLiked ? _likedItems.add(item.id) : _likedItems.remove(item.id));
+      showTopBanner(context, "Couldn't save your heart. Please try again.", isSuccess: false);
+    } finally {
+      _likeBusy.remove(item.id);
+    }
+  }
+
+  /// In-app directions on OpenStreetMap to this café's own coordinates —
+  /// never an external maps app.
+  void _openDirections() {
+    Navigator.push(context, slideUpRoute(DirectionsPage(shop: _shop)));
   }
 
   Future<void> _openCall() async {
-    final phone = widget.shop.phoneNumber;
+    final phone = _shop.phoneNumber;
     if (phone == null || phone.trim().isEmpty) {
       showTopBanner(context, 'No phone number available for this shop.', isSuccess: false);
       return;
@@ -142,53 +226,33 @@ class _ShopDetailPageState extends State<ShopDetailPage> {
       if (review.userId == uid) existing = review;
     }
     final posted = await Navigator.of(context).push<bool>(
-      slideUpRoute(AddReviewPage(shop: widget.shop, existing: existing)),
+      slideUpRoute(AddReviewPage(shop: _shop, existing: existing)),
     );
     if (posted == true && mounted) {
       showTopBanner(context, existing == null ? 'Review posted!' : 'Review updated!', isSuccess: true);
     }
   }
 
-  void _openSuggestEdit() {
-    final controller = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Suggest an edit'),
-        content: TextField(
-          controller: controller,
-          maxLines: 3,
-          decoration: const InputDecoration(
-            hintText: 'e.g. correct hours, wrong address...',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBrown),
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Thanks! Your suggestion was submitted.')),
-              );
-              // TODO: send this to a Firestore "suggested_edits" collection
-              // for moderation instead of just showing a confirmation.
-            },
-            child: const Text('Submit', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
+  /// The café's header photo is a fixed 16:9 box across the screen.
+  static double _headerPhotoHeight(BuildContext context) => MediaQuery.sizeOf(context).width / ImageRatios.banner;
+
+  /// Header = 16:9 photo + café info (its text grows with the phone's font
+  /// size). Mall cafés show two extra lines (mall + floor/unit), plus one
+  /// more for the landmark.
+  static double _headerHeight(BuildContext context, CoffeeShop shop) {
+    final info = !shop.isInMall
+        ? 260.0
+        : (shop.mallFloorAndUnit != null && (shop.mallLandmark?.trim().isNotEmpty ?? false) ? 322.0 : 304.0);
+    final scaler = MediaQuery.textScalerOf(context);
+    final tags = CafeVibeTags.tagsFor(shop).isEmpty ? 0.0 : 10 + scaler.scale(CafeVibeTags.rowHeight);
+    return _headerPhotoHeight(context) + scaler.scale(info) + tags;
   }
 
   @override
   Widget build(BuildContext context) {
-    final shop = widget.shop;
+    final shop = _shop;
+    final prefs = _prefs;
+    final match = prefs == null ? null : vibeMatchFor(prefs, shop);
 
     return DefaultTabController(
       length: 5,
@@ -198,17 +262,26 @@ class _ShopDetailPageState extends State<ShopDetailPage> {
           headerSliverBuilder: (context, innerBoxIsScrolled) {
             return [
               SliverAppBar(
-                pinned: true,
+                // The header (photo, info, tabs) stays pinned on phones in
+                // portrait; on short screens (landscape) it would cover the
+                // whole screen, so it scrolls away with the content instead.
+                pinned: _headerHeight(context, shop) < MediaQuery.sizeOf(context).height * 0.7,
                 floating: false,
                 backgroundColor: Colors.white,
                 elevation: 0,
+                // Keep the header white while the tab content scrolls under it
+                // (Material 3 would otherwise tint it beige).
+                scrolledUnderElevation: 0,
+                surfaceTintColor: Colors.transparent,
                 automaticallyImplyLeading: false,
                 expandedHeight: 0,
                 toolbarHeight: 0,
                 bottom: PreferredSize(
-                  // Mall cafés show two extra lines (mall + floor/landmark).
-                  preferredSize: Size.fromHeight(shop.isInMall ? 504 : 460),
+                  // Header = 16:9 photo + café info. Mall cafés show two extra
+                  // lines (mall + floor/landmark), plus one for the landmark.
+                  preferredSize: Size.fromHeight(_headerHeight(context, shop)),
                   child: _ShopHeader(
+                    photoHeight: _headerPhotoHeight(context),
                     shop: shop,
                     averageRating: _averageRating,
                     onBack: () => Navigator.pop(context),
@@ -216,8 +289,11 @@ class _ShopDetailPageState extends State<ShopDetailPage> {
                     onDirections: _openDirections,
                     onOpenLink: _openOnlineLink,
                     onShare: _openShare,
-                    onEdit: _openSuggestEdit,
                     onSaveToCollection: () => showSaveToCollectionSheet(context, shop),
+                    vibeMatch: match,
+                    onVibeMatchTap: match == null
+                        ? null
+                        : () => showVibeMatchSheet(context, match: match, shopName: shop.name, onEditPreferences: _openPreferences),
                   ),
                 ),
               ),
@@ -227,6 +303,7 @@ class _ShopDetailPageState extends State<ShopDetailPage> {
             children: [
               _OverviewTab(
                 shop: shop,
+                menuItems: _menuItems,
                 reviews: _reviews,
                 averageRating: _averageRating,
                 onSeeAllReviews: () => DefaultTabController.of(context).animateTo(2),
@@ -237,8 +314,9 @@ class _ShopDetailPageState extends State<ShopDetailPage> {
                 menuItems: _menuItems,
                 likedItems: _likedItems,
                 onToggleLike: _toggleLike,
+                canLike: !_isOwnShop,
               ),
-              _ReviewsTab(reviews: _reviews, onAddReview: _openAddReview),
+              _ReviewsTab(reviews: _reviews, shopName: shop.name, shopLogoUrl: shop.logoUrl, onAddReview: _openAddReview),
               _PhotoTab(shop: shop),
               _AboutTab(shop: shop),
             ],
@@ -254,16 +332,21 @@ class _ShopDetailPageState extends State<ShopDetailPage> {
 /// Call/Directions/Website/Share icon row, and the tab bar underneath.
 class _ShopHeader extends StatelessWidget {
   final CoffeeShop shop;
+  final double photoHeight; // 16:9 box
   final double averageRating;
   final VoidCallback onBack;
   final VoidCallback onCall;
   final VoidCallback onDirections;
   final ValueChanged<OnlineLink> onOpenLink;
   final VoidCallback onShare;
-  final VoidCallback onEdit;
   final VoidCallback onSaveToCollection;
+  final VibeMatch? vibeMatch; // null = nothing to show
+  final VoidCallback? onVibeMatchTap;
 
   const _ShopHeader({
+    this.vibeMatch,
+    this.onVibeMatchTap,
+    required this.photoHeight,
     required this.shop,
     required this.averageRating,
     required this.onBack,
@@ -271,7 +354,6 @@ class _ShopHeader extends StatelessWidget {
     required this.onDirections,
     required this.onOpenLink,
     required this.onShare,
-    required this.onEdit,
     required this.onSaveToCollection,
   });
 
@@ -282,7 +364,7 @@ class _ShopHeader extends StatelessWidget {
         Stack(
           clipBehavior: Clip.none,
           children: [
-            ShopPhoto(shop: shop, index: 0, width: double.infinity, height: 200),
+            ShopBanner(shop: shop, width: double.infinity, height: photoHeight),
             Positioned(
               top: 12,
               left: 12,
@@ -350,14 +432,10 @@ class _ShopHeader extends StatelessWidget {
                       style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.textDark),
                     ),
                   ),
-                  InkWell(
-                    onTap: onEdit,
-                    borderRadius: BorderRadius.circular(16),
-                    child: const Padding(
-                      padding: EdgeInsets.all(4),
-                      child: Icon(Icons.edit_outlined, size: 18, color: AppColors.textGrey),
-                    ),
-                  ),
+                  if (vibeMatch != null && onVibeMatchTap != null) ...[
+                    const SizedBox(width: 8),
+                    VibeMatchPill(match: vibeMatch!, onTap: onVibeMatchTap!),
+                  ],
                 ],
               ),
               const SizedBox(height: 4),
@@ -394,20 +472,27 @@ class _ShopHeader extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark),
                           ),
-                          if (shop.mallDetails != null) ...[
-                            const SizedBox(height: 2),
-                            Text(
-                              shop.mallDetails!,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontSize: 12, color: AppColors.textGrey),
-                            ),
-                          ],
+                          // "2nd Floor · Unit 204", then the landmark below it.
+                          for (final line in [shop.mallFloorAndUnit, shop.mallLandmark?.trim()])
+                            if (line != null && line.isNotEmpty) ...[
+                              const SizedBox(height: 2),
+                              Text(
+                                line,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 12, color: AppColors.textGrey),
+                              ),
+                            ],
                         ],
                       ),
                     ),
                   ],
                 ),
+              ],
+              // The café's own vibe (from its Café Features).
+              if (CafeVibeTags.tagsFor(shop).isNotEmpty) ...[
+                const SizedBox(height: 10),
+                CafeVibeTags(shop: shop),
               ],
               const SizedBox(height: 16),
               // Equal-width columns, so 3 or 4 buttons are always evenly spaced.
@@ -522,6 +607,7 @@ class _RoundIconButton extends StatelessWidget {
 
 class _OverviewTab extends StatelessWidget {
   final CoffeeShop shop;
+  final List<MenuItem> menuItems;
   final List<Review> reviews;
   final double averageRating;
   final VoidCallback onSeeAllReviews;
@@ -529,6 +615,7 @@ class _OverviewTab extends StatelessWidget {
 
   const _OverviewTab({
     required this.shop,
+    required this.menuItems,
     required this.reviews,
     required this.averageRating,
     required this.onSeeAllReviews,
@@ -540,33 +627,36 @@ class _OverviewTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
       children: [
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: const Color(0xFFFFF6EC),
-            borderRadius: BorderRadius.circular(14),
+        // The owner's own description — hidden when they haven't written one
+        // (never placeholder or made-up text).
+        if (shop.description.trim().isNotEmpty) ...[
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF6EC),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.info_outline_rounded, size: 18, color: AppColors.primaryBrown),
+                    SizedBox(width: 6),
+                    Text('Description', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  shop.description.trim(),
+                  style: const TextStyle(fontSize: 12.5, color: AppColors.textDark, height: 1.5),
+                ),
+              ],
+            ),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: const [
-                  Icon(Icons.info_outline_rounded, size: 18, color: AppColors.primaryBrown),
-                  SizedBox(width: 6),
-                  Text('Know before you go', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'The shop is clean, accessible, and surrounded by local businesses, '
-                'making it a convenient stop for visitors. It sits along a busy, '
-                'well-maintained street with easy access on foot or by motorbike.',
-                style: TextStyle(fontSize: 12.5, color: AppColors.textGrey, height: 1.5),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 20),
+          const SizedBox(height: 20),
+        ],
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -584,18 +674,14 @@ class _OverviewTab extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         SizedBox(
-          height: 90,
+          height: 72,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
-            itemCount: shop.menu.length.clamp(0, 4),
+            itemCount: menuItems.length.clamp(0, 4),
             separatorBuilder: (_, __) => const SizedBox(width: 8),
-            itemBuilder: (context, index) => Container(
-              width: 90,
-              decoration: BoxDecoration(
-                color: AppColors.primaryBrown.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Center(child: Icon(Icons.local_cafe_rounded, color: AppColors.primaryBrown, size: 26)),
+            itemBuilder: (context, index) => ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: MenuItemImage(item: menuItems[index], shop: shop, fallbackIndex: index, width: 96, height: 72),
             ),
           ),
         ),
@@ -646,7 +732,7 @@ class _OverviewTab extends StatelessWidget {
             child: Text('No reviews yet — be the first!', style: TextStyle(color: AppColors.textGrey, fontSize: 13)),
           )
         else
-          ...reviews.take(2).map((r) => _ReviewCard(review: r)),
+          ...reviews.take(2).map((r) => _ReviewCard(review: r, shopName: shop.name, shopLogoUrl: shop.logoUrl)),
       ],
     );
   }
@@ -733,7 +819,10 @@ class _ReviewSummary extends StatelessWidget {
 class _ReviewCard extends StatelessWidget {
   final Review review;
 
-  const _ReviewCard({required this.review});
+  final String shopName; // the café's current name, for its response
+  final String? shopLogoUrl; // and its logo
+
+  const _ReviewCard({required this.review, required this.shopName, this.shopLogoUrl});
 
   /// Full-screen, pinch-to-zoom view of a review's photo.
   void _showReviewPhoto(BuildContext context, String url) {
@@ -794,12 +883,11 @@ class _ReviewCard extends StatelessWidget {
               onTap: () => _showReviewPhoto(context, review.photoUrl!),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(10),
-                child: Image.network(
+                child: FittedImage.network(
                   review.photoUrl!,
                   width: 60,
                   height: 60,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
+                  fallback: Container(
                     width: 60,
                     height: 60,
                     color: AppColors.primaryBrown.withOpacity(0.15),
@@ -808,6 +896,20 @@ class _ReviewCard extends StatelessWidget {
                 ),
               ),
             ),
+          ],
+          if (review.ownerHearted) ...[
+            const SizedBox(height: 8),
+            const Row(
+              children: [
+                Icon(Icons.favorite_rounded, size: 14, color: Color(0xFFE04B4B)),
+                SizedBox(width: 5),
+                Text('The café appreciated this review', style: TextStyle(fontSize: 11.5, color: AppColors.textGrey, fontWeight: FontWeight.w600)),
+              ],
+            ),
+          ],
+          if (review.hasOwnerReply) ...[
+            const SizedBox(height: 10),
+            OwnerResponseBox(text: review.ownerReply!, shopName: shopName, shopLogoUrl: shopLogoUrl),
           ],
           const SizedBox(height: 8),
           Row(
@@ -825,107 +927,164 @@ class _ReviewCard extends StatelessWidget {
 
 // -------------------------------- MENU TAB --------------------------------
 
-class _MenuTab extends StatelessWidget {
+class _MenuTab extends StatefulWidget {
   final CoffeeShop shop;
   final List<MenuItem> menuItems;
   final Set<String> likedItems;
-  final void Function(MenuItem item) onToggleLike;
+  final Future<void> Function(MenuItem item) onToggleLike;
+  final bool canLike; // false on the owner's own café
 
   const _MenuTab({
     required this.shop,
     required this.menuItems,
     required this.likedItems,
     required this.onToggleLike,
+    required this.canLike,
   });
 
   @override
+  State<_MenuTab> createState() => _MenuTabState();
+}
+
+class _MenuTabState extends State<_MenuTab> {
+  String? _category; // category chip; null = All
+
+  void _openCoffee(MenuItem item) {
+    Navigator.push(
+      context,
+      slideUpRoute(CoffeeDetailPage(
+        shop: widget.shop,
+        item: item,
+        isLiked: () => widget.likedItems.contains(item.id),
+        onToggleLike: widget.canLike ? () => widget.onToggleLike(item) : null,
+        canReview: widget.canLike, // owners don't review their own coffee
+      )),
+    );
+  }
+
+  Widget _card(MenuItem item, {required bool isTopPick}) {
+    return _MenuItemCard(
+      shop: widget.shop,
+      item: item,
+      photoIndex: widget.menuItems.indexOf(item),
+      isLiked: widget.likedItems.contains(item.id),
+      isTopPick: isTopPick,
+      onToggleLike: () => widget.onToggleLike(item),
+      onTap: () => _openCoffee(item),
+    );
+  }
+
+  /// Height of a menu card's text below its 4:3 photo.
+  static const double _cardTextHeight = 70;
+
+  Widget _grid(List<MenuItem> items, List<MenuItem> topLiked) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final cardWidth = (constraints.maxWidth - 14) / 2;
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: 14,
+            mainAxisSpacing: 16,
+            mainAxisExtent: cardWidth / ImageRatios.coffee + MediaQuery.textScalerOf(context).scale(_cardTextHeight),
+          ),
+          itemCount: items.length,
+          itemBuilder: (context, index) => _card(items[index], isTopPick: topLiked.contains(items[index])),
+        );
+      },
+    );
+  }
+
+  Widget _row(List<MenuItem> items, List<MenuItem> topLiked) {
+    return SizedBox(
+      height: 140 / ImageRatios.coffee + MediaQuery.textScalerOf(context).scale(_cardTextHeight),
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: items.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 14),
+        itemBuilder: (context, index) => SizedBox(width: 140, child: _card(items[index], isTopPick: topLiked.contains(items[index]))),
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final menuItems = widget.menuItems;
     if (menuItems.isEmpty) {
       return const Center(child: Text('Menu not available yet.', style: TextStyle(color: AppColors.textGrey)));
     }
 
-    // "Best sellers" = the most-hearted items, recomputed live as people like things.
+    // "Popular" = the most-hearted coffees (real customer hearts — Kafelo
+    // doesn't track sales), recomputed live as people heart things.
     final bestSellers = List.of(menuItems)..sort((a, b) => b.likes.compareTo(a.likes));
     final topLiked = bestSellers.take(3).where((item) => item.likes > 0).toList();
+    // The owner's picks for the top of the menu.
+    final featured = [for (final (_, items) in CoffeeCategory.group(menuItems)) ...items.where((i) => i.featured)];
+    final categories = CoffeeCategory.used(menuItems);
+    final category = categories.contains(_category) ? _category : null;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
       children: [
-        if (topLiked.isNotEmpty) ...[
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: const [
-                  Text('❤️', style: TextStyle(fontSize: 15)),
-                  SizedBox(width: 6),
-                  Text('Best Sellers', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.textDark)),
-                ],
-              ),
-              GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    slideUpRoute(BestSellersPage(shop: shop, menuItems: menuItems)),
-                  );
-                },
-                child: const Text(
-                  'See all',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primaryBrown),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 210,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: topLiked.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 14),
-              itemBuilder: (context, index) {
-                final item = topLiked[index];
-                final originalIndex = menuItems.indexOf(item);
-                return SizedBox(
-                  width: 140,
-                  child: _MenuItemCard(
-                    shop: shop,
-                    item: item,
-                    photoIndex: originalIndex,
-                    isLiked: likedItems.contains(item.name),
-                    isTopPick: true,
-                    onToggleLike: () => onToggleLike(item),
-                  ),
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 28),
-        ],
-        const Text('Full Menu', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.textDark)),
-        const SizedBox(height: 12),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 14,
-            mainAxisSpacing: 16,
-            childAspectRatio: 0.72,
-          ),
-          itemCount: menuItems.length,
-          itemBuilder: (context, index) {
-            final item = menuItems[index];
-            return _MenuItemCard(
-              shop: shop,
-              item: item,
-              photoIndex: index,
-              isLiked: likedItems.contains(item.name),
-              isTopPick: topLiked.contains(item),
-              onToggleLike: () => onToggleLike(item),
-            );
-          },
+        CoffeeCategoryChips(
+          categories: categories,
+          selected: category,
+          onSelected: (c) => setState(() => _category = c),
         ),
+        const SizedBox(height: 20),
+        if (category == null) ...[
+          if (featured.isNotEmpty) ...[
+            const Row(
+              children: [
+                Icon(Icons.auto_awesome_rounded, size: 17, color: Color(0xFF3E5641)),
+                SizedBox(width: 6),
+                Text('Featured', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.textDark)),
+              ],
+            ),
+            const SizedBox(height: 12),
+            _row(featured, topLiked),
+            const SizedBox(height: 28),
+          ],
+          if (topLiked.isNotEmpty) ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Row(
+                  children: [
+                    Text('❤️', style: TextStyle(fontSize: 15)),
+                    SizedBox(width: 6),
+                    Text('Popular Coffee', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.textDark)),
+                  ],
+                ),
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      slideUpRoute(BestSellersPage(shop: widget.shop, menuItems: menuItems)),
+                    );
+                  },
+                  child: const Text(
+                    'See all',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primaryBrown),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            _row(topLiked, topLiked),
+            const SizedBox(height: 28),
+          ],
+          // The full menu, organized by coffee category.
+          for (final (name, items) in CoffeeCategory.group(menuItems)) ...[
+            CoffeeSectionTitle(name, count: items.length),
+            const SizedBox(height: 12),
+            _grid(items, topLiked),
+            const SizedBox(height: 24),
+          ],
+        ] else
+          _grid(CoffeeCategory.group(menuItems).firstWhere((g) => g.$1 == category).$2, topLiked),
       ],
     );
   }
@@ -938,6 +1097,7 @@ class _MenuItemCard extends StatelessWidget {
   final bool isLiked;
   final bool isTopPick;
   final VoidCallback onToggleLike;
+  final VoidCallback onTap;
 
   const _MenuItemCard({
     required this.shop,
@@ -946,102 +1106,111 @@ class _MenuItemCard extends StatelessWidget {
     required this.isLiked,
     required this.isTopPick,
     required this.onToggleLike,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Stack(
-            children: [
-              Positioned.fill(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(18),
-                  child: MenuItemImage(item: item, shop: shop, fallbackIndex: photoIndex + 20, width: double.infinity, height: double.infinity),
+    // Up to two labels: owner's Best Seller / Featured / New, plus Popular
+    // for the most-hearted coffees.
+    final badges = [
+      ...coffeeBadges(item, includeUnavailable: false),
+      if (isTopPick) CoffeeBadgeKind.popular,
+    ]..sort((a, b) => a.index.compareTo(b.index));
+    final shown = [
+      if (badges.contains(CoffeeBadgeKind.bestSeller)) CoffeeBadgeKind.bestSeller,
+      if (badges.contains(CoffeeBadgeKind.popular)) CoffeeBadgeKind.popular,
+      ...badges.where((b) => b != CoffeeBadgeKind.bestSeller && b != CoffeeBadgeKind.popular),
+    ].take(2);
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AspectRatio(
+            aspectRatio: ImageRatios.coffee,
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(18),
+                    child: Opacity(
+                      opacity: item.available ? 1 : 0.45,
+                      child: MenuItemImage(item: item, shop: shop, fallbackIndex: photoIndex + 20, width: double.infinity, height: double.infinity),
+                    ),
+                  ),
                 ),
-              ),
-              if (isTopPick)
-                Positioned(
-                  top: 8,
-                  left: 8,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE04B4B),
-                      borderRadius: BorderRadius.circular(8),
-                      boxShadow: [
-                        BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 4, offset: const Offset(0, 2)),
+                if (!item.available)
+                  const Positioned(left: 8, bottom: 8, child: CoffeeBadge(CoffeeBadgeKind.unavailable)),
+                if (shown.isNotEmpty)
+                  Positioned(
+                    top: 8,
+                    left: 8,
+                    right: 48,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        for (final badge in shown) ...[
+                          CoffeeBadge(badge),
+                          const SizedBox(height: 4),
+                        ],
                       ],
                     ),
-                    child: const Text(
-                      'BEST SELLER',
-                      style: TextStyle(fontSize: 8.5, color: Colors.white, fontWeight: FontWeight.w800, letterSpacing: 0.3),
+                  ),
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: GestureDetector(
+                    onTap: onToggleLike,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      width: 34,
+                      height: 34,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white,
+                        boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2))],
+                      ),
+                      child: Icon(
+                        isLiked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                        size: 18,
+                        color: isLiked ? const Color(0xFFE04B4B) : AppColors.textGrey,
+                      ),
                     ),
                   ),
                 ),
-              Positioned(
-                top: 8,
-                right: 8,
-                child: GestureDetector(
-                  onTap: onToggleLike,
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 150),
-                    width: 34,
-                    height: 34,
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white,
-                      boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2))],
-                    ),
-                    child: Icon(
-                      isLiked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                      size: 18,
-                      color: isLiked ? const Color(0xFFE04B4B) : AppColors.textGrey,
-                    ),
-                  ),
-                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            item.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5, color: item.available ? AppColors.textDark : AppColors.textGrey),
+          ),
+          Text(
+            item.available ? item.category : '${item.category} · Unavailable',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 11, color: item.available ? AppColors.textGrey : const Color(0xFFD64545), fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 3),
+          Row(
+            children: [
+              Text(
+                MenuItem.formatPrice(item.price),
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.primaryBrown),
               ),
+              const Spacer(),
+              Icon(Icons.favorite_rounded, size: 12, color: Colors.grey.shade400),
+              const SizedBox(width: 2),
+              Text('${item.likes}', style: TextStyle(fontSize: 11, color: Colors.grey.shade500, fontWeight: FontWeight.w600)),
             ],
           ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          item.name,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5, color: AppColors.textDark),
-        ),
-        const SizedBox(height: 3),
-        Row(
-          children: [
-            if (item.originalPrice != null) ...[
-              Text(
-                '₱${item.originalPrice!.toStringAsFixed(0)}',
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppColors.textGrey,
-                  decoration: TextDecoration.lineThrough,
-                ),
-              ),
-              const SizedBox(width: 5),
-            ],
-            Text(
-              '₱${item.price.toStringAsFixed(0)}',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w800,
-                color: item.originalPrice != null ? const Color(0xFFE04B4B) : AppColors.textDark,
-              ),
-            ),
-            const Spacer(),
-            Icon(Icons.favorite_rounded, size: 12, color: Colors.grey.shade400),
-            const SizedBox(width: 2),
-            Text('${item.likes}', style: TextStyle(fontSize: 11, color: Colors.grey.shade500, fontWeight: FontWeight.w600)),
-          ],
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -1052,7 +1221,10 @@ class _ReviewsTab extends StatelessWidget {
   final List<Review> reviews;
   final VoidCallback onAddReview;
 
-  const _ReviewsTab({required this.reviews, required this.onAddReview});
+  final String shopName;
+  final String? shopLogoUrl;
+
+  const _ReviewsTab({required this.reviews, required this.shopName, this.shopLogoUrl, required this.onAddReview});
 
   @override
   Widget build(BuildContext context) {
@@ -1079,7 +1251,7 @@ class _ReviewsTab extends StatelessWidget {
                 ? const Center(child: Text('No reviews yet — be the first!', style: TextStyle(color: AppColors.textGrey)))
                 : ListView.builder(
                     itemCount: reviews.length,
-                    itemBuilder: (context, index) => _ReviewCard(review: reviews[index]),
+                    itemBuilder: (context, index) => _ReviewCard(review: reviews[index], shopName: shopName, shopLogoUrl: shopLogoUrl),
                   ),
           ),
         ],
@@ -1097,7 +1269,10 @@ class _PhotoTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (shop.effectivePhotoCount == 0) {
+    // The café's gallery: the owner's other uploaded photos, in their saved
+    // order — not the banner (that's the header photo).
+    final photos = ShopBanner.galleryFor(shop);
+    if (photos.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
@@ -1107,14 +1282,9 @@ class _PhotoTab extends StatelessWidget {
               Icon(Icons.photo_library_outlined, size: 48, color: AppColors.textGrey.withOpacity(0.5)),
               const SizedBox(height: 12),
               const Text(
-                'No photos yet',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark),
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                'This shop hasn\'t added any photos.',
+                'No photos available yet.',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13, color: AppColors.textGrey),
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textGrey),
               ),
             ],
           ),
@@ -1122,18 +1292,35 @@ class _PhotoTab extends StatelessWidget {
       );
     }
 
-    return GridView.builder(
-      padding: const EdgeInsets.all(16),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        crossAxisSpacing: 8,
-        mainAxisSpacing: 8,
-      ),
-      itemCount: shop.effectivePhotoCount,
-      itemBuilder: (context, index) => ClipRRect(
-        borderRadius: BorderRadius.circular(10),
-        child: ShopPhoto(shop: shop, index: index, width: double.infinity, height: double.infinity),
-      ),
+    void open(int index) => openPhotoViewer(context, photos, initialIndex: index);
+
+    // The first photo wide (16:9), the rest two to a row (4:3).
+    return CustomScrollView(
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+          sliver: SliverToBoxAdapter(
+            child: AspectRatio(
+              aspectRatio: ImageRatios.banner,
+              child: GalleryTile(url: photos.first, onTap: () => open(0)),
+            ),
+          ),
+        ),
+        if (photos.length > 1)
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+            sliver: SliverGrid.builder(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 8,
+                childAspectRatio: 4 / 3,
+              ),
+              itemCount: photos.length - 1,
+              itemBuilder: (context, i) => GalleryTile(url: photos[i + 1], onTap: () => open(i + 1)),
+            ),
+          ),
+      ],
     );
   }
 }
@@ -1150,13 +1337,16 @@ class _AboutTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        const Text('About', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
-        const SizedBox(height: 8),
-        Text(shop.description, style: const TextStyle(fontSize: 13, color: AppColors.textDark, height: 1.5)),
-        const SizedBox(height: 20),
+        // The owner's description, only when they've written one.
+        if (shop.description.trim().isNotEmpty) ...[
+          const Text('About', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 8),
+          Text(shop.description.trim(), style: const TextStyle(fontSize: 13, color: AppColors.textDark, height: 1.5)),
+          const SizedBox(height: 20),
+        ],
         _InfoRow(icon: Icons.location_on_outlined, text: shop.locationLabel),
-        if (shop.isInMall && (shop.mallFloor?.trim().isNotEmpty ?? false))
-          _InfoRow(icon: Icons.layers_outlined, text: shop.mallFloor!.trim()),
+        if (shop.mallFloorAndUnit != null)
+          _InfoRow(icon: Icons.layers_outlined, text: shop.mallFloorAndUnit!),
         if (shop.isInMall && (shop.mallLandmark?.trim().isNotEmpty ?? false))
           _InfoRow(icon: Icons.signpost_outlined, text: shop.mallLandmark!.trim()),
         _HoursRow(hours: shop.hours),

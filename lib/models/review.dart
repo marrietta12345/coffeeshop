@@ -15,6 +15,15 @@ class Review {
   final int likes;
   final String? photoUrl; // optional attached photo (Supabase Storage)
   final DateTime? createdAt;
+  final String? ownerReply; // the shop owner's response, if any
+  final DateTime? ownerRepliedAt; // when it was last written/edited
+  final DateTime? ownerReplyCreatedAt; // when it was first written
+  final String? ownerReplyBy; // uid of the owner who wrote it (not shown)
+  final bool ownerHearted; // the shop owner appreciated this review
+  final String? userPhotoUrl; // the reviewer's profile photo, if they had one
+  // Set only on coffee reviews (shops/{shopId}/coffeeReviews): which drink.
+  final String? coffeeId;
+  final String? coffeeName;
 
   const Review({
     this.id = '',
@@ -27,9 +36,19 @@ class Review {
     this.likes = 0,
     this.photoUrl,
     this.createdAt,
+    this.ownerReply,
+    this.ownerRepliedAt,
+    this.ownerReplyCreatedAt,
+    this.ownerReplyBy,
+    this.ownerHearted = false,
+    this.userPhotoUrl,
+    this.coffeeId,
+    this.coffeeName,
   });
 
   bool get hasPhoto => photoUrl?.isNotEmpty ?? false;
+  bool get hasText => text.trim().isNotEmpty;
+  bool get hasOwnerReply => ownerReply?.trim().isNotEmpty ?? false;
 
   factory Review.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data() ?? const {};
@@ -46,6 +65,14 @@ class Review {
       likes: (data['likes'] as num?)?.toInt() ?? 0,
       photoUrl: data['photoUrl'] as String?,
       createdAt: createdAt,
+      ownerReply: data['ownerReply'] as String?,
+      ownerRepliedAt: (data['ownerRepliedAt'] as Timestamp?)?.toDate(),
+      ownerReplyCreatedAt: (data['ownerReplyCreatedAt'] as Timestamp?)?.toDate(),
+      ownerReplyBy: data['ownerReplyBy'] as String?,
+      ownerHearted: (data['ownerHearted'] as bool?) ?? false,
+      userPhotoUrl: data['userPhotoUrl'] as String?,
+      coffeeId: data['coffeeId'] as String?,
+      coffeeName: data['coffeeName'] as String?,
     );
   }
 

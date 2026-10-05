@@ -7,8 +7,18 @@ rules_version = '2';
 //                                    visited cafés, discoveries, preferences)
 //   users/{uid}/savedShops/{shopId}  hearted cafés
 //   users/{uid}/collections/{id}     personal café collections
+//   malls/{mallKey}                  shared mall records (one mall → many
+//                                    cafés; each café stays its own shop)
 //   shops/{shopId}                   public café listing (owner-managed)
 //   shops/{shopId}/reviews/{uid}     one review per user per café
+//   shops/{shopId}/menu/{itemId}     the café's coffee menu (owner-managed)
+//   shops/{shopId}/menu/{itemId}/likes/{uid}
+//                                    one customer heart per coffee
+//   shops/{shopId}/coffeeReviews/{coffeeId}_{uid}
+//                                    one review per customer per coffee
+//   shops/{shopId}/activity/{uid}    one engagement record per user per café
+//                                    (views, favorite, collection save) —
+//                                    readable only by that café's owner
 //
 // Images live in Supabase Storage, not here — these rules don't cover them.
 service cloud.firestore {
@@ -25,6 +35,19 @@ service cloud.firestore {
     // Field names this update adds, removes, or changes.
     function changedKeys() {
       return request.resource.data.diff(resource.data).affectedKeys();
+    }
+
+    // An owner's response on a café or coffee review: the text, the
+    // owner's own uid (for security — customers see the café's name), and
+    // its dates. Written now = server time; removed all together.
+    function validReplyFields(data, changed) {
+      return (('ownerReply' in data) == ('ownerRepliedAt' in data))
+        && (!('ownerReply' in data) || (data.ownerReply is string && data.ownerReply.size() > 0 && data.ownerReply.size() <= 1000))
+        && (!changed.hasAny(['ownerReply', 'ownerRepliedAt']) || !('ownerRepliedAt' in data) || data.ownerRepliedAt == request.time)
+        && (!changed.hasAny(['ownerReplyBy']) || !('ownerReplyBy' in data) || data.ownerReplyBy == request.auth.uid)
+        && (!changed.hasAny(['ownerReplyCreatedAt']) || !('ownerReplyCreatedAt' in data) || data.ownerReplyCreatedAt == request.time)
+        // no leftover author or date once the response is deleted
+        && (('ownerReply' in data) || (!('ownerReplyBy' in data) && !('ownerReplyCreatedAt' in data)));
     }
 
     // ------------------------------------------------------------------
@@ -59,6 +82,28 @@ service cloud.firestore {
     }
 
     // ------------------------------------------------------------------
+    // Malls — a shared location, not a business. Anyone can read them (for
+    // the Mall Name search); a signed-in owner can add a new one, keyed by
+    // its normalized name so the same mall isn't added twice. Nobody can
+    // change or remove a mall other cafés may point to.
+    // ------------------------------------------------------------------
+    match /malls/{mallId} {
+      allow read: if true;
+
+      allow create: if signedIn()
+        && mallId.matches('^[a-z0-9]+(-[a-z0-9]+)*$')
+        && mallId.size() <= 100
+        && request.resource.data.keys().hasOnly(['name', 'createdBy', 'createdAt'])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 2
+        && request.resource.data.name.size() <= 80
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.createdAt == request.time;
+
+      allow update, delete: if false;
+    }
+
+    // ------------------------------------------------------------------
     // Shops — public to read; owners manage their own listing. Signed-in
     // customers may only nudge the counters the app maintains (views,
     // favorites, and the rating totals that go with their own review).
@@ -67,6 +112,18 @@ service cloud.firestore {
 
       function isOwner() {
         return signedIn() && request.auth.uid == resource.data.ownerId;
+      }
+
+      function activityPath() {
+        return /databases/$(database)/documents/shops/$(shopId)/activity/$(request.auth.uid);
+      }
+
+      // A user's very first view of this café: their activity record gets
+      // `firstViewedAt` in this same write, and didn't have it before.
+      function isFirstView() {
+        return existsAfter(activityPath())
+          && getAfter(activityPath()).data.get('firstViewedAt', null) == request.time
+          && (!exists(activityPath()) || get(activityPath()).data.get('firstViewedAt', null) == null);
       }
 
       function reviewPath() {
@@ -116,10 +173,12 @@ service cloud.firestore {
 
       allow delete: if isOwner();
 
-      // Anyone signed in: one profile view (+1).
+      // Anyone signed in: one profile view (+1), only on their first ever
+      // view of this café — so viewCount counts unique viewers.
       allow update: if signedIn()
         && changedKeys().hasOnly(['viewCount'])
-        && request.resource.data.viewCount == resource.data.get('viewCount', 0) + 1;
+        && request.resource.data.viewCount == resource.data.get('viewCount', 0) + 1
+        && isFirstView();
 
       // Anyone signed in: save / unsave the café (±1).
       allow update: if signedIn()
@@ -145,13 +204,14 @@ service cloud.firestore {
 
         function validReview() {
           let data = request.resource.data;
-          return data.keys().hasOnly(['shopId', 'userId', 'userName', 'rating', 'text', 'photoUrl', 'likes', 'createdAt'])
+          return data.keys().hasOnly(['shopId', 'userId', 'userName', 'userPhotoUrl', 'rating', 'text', 'photoUrl', 'likes', 'createdAt'])
             && data.shopId == shopId
             && data.userId == userId
             && data.userName is string && data.userName.size() <= 60
             && data.rating is number && data.rating >= 1 && data.rating <= 5
             && data.text is string && data.text.size() > 0 && data.text.size() <= 2000
             && (data.photoUrl == null || (data.photoUrl is string && data.photoUrl.size() <= 1000))
+            && (data.get('userPhotoUrl', null) == null || (data.userPhotoUrl is string && data.userPhotoUrl.size() <= 1000))
             && data.createdAt == request.time;
         }
 
@@ -171,7 +231,195 @@ service cloud.firestore {
           && getAfter(shopPath()).data.get('ratingSum', 0)
             == get(shopPath()).data.get('ratingSum', 0) + request.resource.data.rating - resource.data.rating;
 
+        // The shop's owner may add, edit or delete a response and heart
+        // (appreciate) the review — and change nothing else about it.
+        function validOwnerFields() {
+          let data = request.resource.data;
+          let changed = data.diff(resource.data).affectedKeys();
+          return changed.hasOnly(['ownerReply', 'ownerRepliedAt', 'ownerReplyCreatedAt', 'ownerReplyBy', 'ownerHearted'])
+            && validReplyFields(data, changed)
+            && (!('ownerHearted' in data) || data.ownerHearted == true);
+        }
+
+        allow update: if signedIn()
+          && get(shopPath()).data.ownerId == request.auth.uid
+          && validOwnerFields();
+
         // Deleting would leave the shop's rating totals out of step.
+        allow delete: if false;
+      }
+
+      // ----------------------------------------------------------------
+      // Menu — coffee only, public to read (customers browse it). Only this
+      // café's owner adds, edits or deletes items, and can't change the
+      // heart count. Customers heart a coffee once each: likeCount moves
+      // ±1 only together with their own likes/{uid} record.
+      // ----------------------------------------------------------------
+      match /menu/{itemId} {
+
+        function isShopOwner() {
+          return signedIn() && get(/databases/$(database)/documents/shops/$(shopId)).data.ownerId == request.auth.uid;
+        }
+
+        function myLikePath() {
+          return /databases/$(database)/documents/shops/$(shopId)/menu/$(itemId)/likes/$(request.auth.uid);
+        }
+
+        function validItem() {
+          let data = request.resource.data;
+          return data.keys().hasOnly(['name', 'description', 'price', 'category', 'available', 'bestSeller', 'featured',
+                                      'imageUrl', 'likeCount', 'createdAt', 'updatedAt'])
+            && data.name is string && data.name.size() > 0 && data.name.size() <= 60
+            && data.description is string && data.description.size() <= 300
+            && data.price is number && data.price > 0 && data.price <= 99999
+            && data.category in ['Espresso', 'Latte', 'Cappuccino', 'Americano', 'Cold Brew', 'Pour-over',
+                                 'Mocha', 'Macchiato', 'Spanish Latte', 'Iced Coffee', 'Hot Coffee', 'Other Coffee']
+            && data.available is bool
+            && data.get('bestSeller', false) is bool
+            && data.get('featured', false) is bool
+            && (data.imageUrl == null || (data.imageUrl is string && data.imageUrl.size() <= 1000))
+            && data.updatedAt == request.time;
+        }
+
+        allow read: if true;
+
+        allow create: if isShopOwner()
+          && validItem()
+          && request.resource.data.likeCount == 0
+          && request.resource.data.createdAt == request.time;
+
+        allow update: if isShopOwner()
+          && validItem()
+          && request.resource.data.likeCount == resource.data.likeCount
+          && request.resource.data.createdAt == resource.data.createdAt;
+
+        allow delete: if isShopOwner();
+
+        // A customer's heart (+1) or un-heart (−1), with their own record.
+        allow update: if signedIn() && !isShopOwner()
+          && changedKeys().hasOnly(['likeCount'])
+          && (
+            (request.resource.data.likeCount == resource.data.likeCount + 1
+              && !exists(myLikePath()) && existsAfter(myLikePath()))
+            || (request.resource.data.likeCount == resource.data.likeCount - 1
+              && exists(myLikePath()) && !existsAfter(myLikePath()))
+          );
+
+        match /likes/{userId} {
+          function itemPath() {
+            return /databases/$(database)/documents/shops/$(shopId)/menu/$(itemId);
+          }
+
+          // Customers check their own heart; the owner counts them.
+          allow read: if isUser(userId) || isShopOwner();
+
+          allow create: if isUser(userId) && !isShopOwner()
+            && request.resource.data.keys().hasOnly(['likedAt'])
+            && request.resource.data.likedAt == request.time
+            && getAfter(itemPath()).data.likeCount == get(itemPath()).data.likeCount + 1;
+
+          // Un-heart (count goes down with it), or the owner removing a
+          // deleted coffee's hearts.
+          allow delete: if (isUser(userId)
+              && getAfter(itemPath()).data.likeCount == get(itemPath()).data.likeCount - 1)
+            || isShopOwner();
+
+          allow update: if false;
+        }
+      }
+
+      // ----------------------------------------------------------------
+      // Coffee Reviews — a review of one coffee (separate from the café's
+      // own reviews). Public to read. A customer writes only their own,
+      // one per coffee (id = coffeeId_uid), and may edit or delete it; the
+      // café's owner can't review their own coffee but may add, edit or
+      // delete a response. Owners can also clear a deleted coffee's reviews.
+      // ----------------------------------------------------------------
+      match /coffeeReviews/{reviewId} {
+
+        function cafeOwnerId() {
+          return get(/databases/$(database)/documents/shops/$(shopId)).data.ownerId;
+        }
+
+        function coffeePath(coffeeId) {
+          return /databases/$(database)/documents/shops/$(shopId)/menu/$(coffeeId);
+        }
+
+        function validCoffeeReview() {
+          let data = request.resource.data;
+          return data.keys().hasOnly(['coffeeId', 'shopId', 'coffeeName', 'userId', 'userName', 'userPhotoUrl',
+                                      'rating', 'text', 'photoUrl', 'createdAt', 'updatedAt'])
+            && data.shopId == shopId
+            && data.userId == request.auth.uid
+            && data.coffeeId is string
+            && reviewId == data.coffeeId + '_' + request.auth.uid
+            && exists(coffeePath(data.coffeeId))
+            && data.coffeeName is string && data.coffeeName.size() <= 60
+            && data.userName is string && data.userName.size() <= 60
+            && data.rating is int && data.rating >= 1 && data.rating <= 5
+            && data.text is string && data.text.size() <= 1000
+            && (data.photoUrl == null || (data.photoUrl is string && data.photoUrl.size() <= 1000))
+            && (data.get('userPhotoUrl', null) == null || (data.userPhotoUrl is string && data.userPhotoUrl.size() <= 1000))
+            && data.updatedAt == request.time;
+        }
+
+        function validOwnerResponse() {
+          let data = request.resource.data;
+          let changed = data.diff(resource.data).affectedKeys();
+          return changed.hasOnly(['ownerReply', 'ownerRepliedAt', 'ownerReplyCreatedAt', 'ownerReplyBy'])
+            && validReplyFields(data, changed);
+        }
+
+        allow read: if true;
+
+        allow create: if signedIn()
+          && cafeOwnerId() != request.auth.uid
+          && validCoffeeReview()
+          && request.resource.data.createdAt == request.time;
+
+        // The author edits their review (the original date stays).
+        allow update: if signedIn()
+          && resource.data.userId == request.auth.uid
+          && validCoffeeReview()
+          && request.resource.data.createdAt == resource.data.createdAt;
+
+        // The café's owner responds.
+        allow update: if signedIn()
+          && cafeOwnerId() == request.auth.uid
+          && validOwnerResponse();
+
+        allow delete: if signedIn()
+          && (resource.data.userId == request.auth.uid
+            // the owner, only while deleting that coffee from the menu
+            || (cafeOwnerId() == request.auth.uid && !existsAfter(coffeePath(resource.data.coffeeId))));
+      }
+
+      // ----------------------------------------------------------------
+      // Activity — one record per user (document id = their uid) holding
+      // only timestamps. Each user writes just their own; only this café's
+      // owner can read them (as counts on the dashboard).
+      // ----------------------------------------------------------------
+      match /activity/{userId} {
+
+        function validActivity() {
+          let data = request.resource.data;
+          let before = resource == null ? {} : resource.data;
+          let changed = data.diff(before).affectedKeys();
+          return data.keys().hasOnly(['firstViewedAt', 'lastViewedAt', 'favoritedAt', 'collectionSavedAt'])
+            // first view is set once and never changes
+            && (!('firstViewedAt' in before) || data.get('firstViewedAt', null) == before.firstViewedAt)
+            // any timestamp written now must be the server time
+            && (!changed.hasAny(['firstViewedAt']) || data.firstViewedAt == request.time)
+            && (!changed.hasAny(['lastViewedAt']) || data.lastViewedAt == request.time)
+            && (!changed.hasAny(['favoritedAt']) || !('favoritedAt' in data) || data.favoritedAt == request.time)
+            && (!changed.hasAny(['collectionSavedAt']) || !('collectionSavedAt' in data) || data.collectionSavedAt == request.time);
+        }
+
+        allow read: if isUser(userId)
+          || (signedIn() && get(/databases/$(database)/documents/shops/$(shopId)).data.ownerId == request.auth.uid);
+
+        allow create, update: if isUser(userId) && validActivity();
+
         allow delete: if false;
       }
     }

@@ -35,7 +35,7 @@ class BestSellerTile extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(10),
-              child: MenuItemImage(item: item, shop: shop, fallbackIndex: item.hashCode % 20, width: 60, height: 60),
+              child: MenuItemImage(item: item, shop: shop, fallbackIndex: item.hashCode % 20, width: 64, height: 48),
             ),
             const SizedBox(width: 12),
             Expanded(

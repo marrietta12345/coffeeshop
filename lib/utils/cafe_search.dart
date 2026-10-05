@@ -57,6 +57,7 @@ class CafeSearch {
     for (final shop in shops) {
       final places = <String>{
         if (shop.isInMall) shop.mallName!.trim(),
+        if (shop.isInMall && (shop.mallFloor?.trim().isNotEmpty ?? false)) shop.mallFloor!.trim(),
         ...shop.address.split(',').map((p) => p.trim()).where((p) => p.isNotEmpty),
       };
       for (final place in places) {
@@ -127,7 +128,9 @@ class CafeSearch {
       case SuggestionKind.cafe:
         return shop.id == suggestion.value;
       case SuggestionKind.location:
-        return normalize(shop.mallName ?? '').contains(value) || normalize(shop.address).contains(value);
+        return normalize(shop.mallName ?? '').contains(value) ||
+            normalize(shop.address).contains(value) ||
+            (shop.isInMall && normalize(shop.mallFloor ?? '') == value);
       case SuggestionKind.coffeeType:
         if (shop.coffeeTypes.any((t) => normalize(t) == value)) return true;
         // Also served if it's on the menu ("Hazelnut Latte" → Latte),
@@ -170,7 +173,12 @@ class CafeSearch {
     final name = _nameScore(shop.name, q);
     if (name > 0) return name;
     if (normalize(shop.mallName ?? '').contains(q)) return 40;
+    if (shop.isInMall && normalize(shop.mallFloor ?? '').contains(q)) return 35;
     if (normalize(shop.address).contains(q)) return 30;
+    if (shop.isInMall &&
+        (normalize(shop.mallLandmark ?? '').contains(q) || normalize(shop.unitLabel ?? '').contains(q))) {
+      return 28;
+    }
     final attributes = [
       ...shop.coffeeTypes,
       ...shop.atmospheres,

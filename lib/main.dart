@@ -6,6 +6,7 @@ import 'pages/welcome_page.dart';
 import 'pages/sign_in_page.dart';
 import 'pages/sign_up_page.dart';
 import 'pages/main_nav_page.dart';
+import 'widgets/mobile_frame.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -41,6 +42,9 @@ class MyApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
+      // Mobile layout guard: capped text scaling + a phone-width column on
+      // landscape phones and tablets (see MobileFrame).
+      builder: (context, child) => MobileFrame(child: child ?? const SizedBox.shrink()),
       initialRoute: '/welcome',
       routes: {
         '/welcome': (context) => const WelcomePage(),

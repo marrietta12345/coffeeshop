@@ -2,6 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
+import '../widgets/fitted_image.dart';
+import '../widgets/shop_photo.dart';
 import '../theme/app_colors.dart';
 import '../models/coffee_shop.dart';
 import '../utils/owner_shop_service.dart';
@@ -28,8 +30,14 @@ class _OwnerGalleryPageState extends State<OwnerGalleryPage> {
 
   Future<void> _addPhotos() async {
     final picker = ImagePicker();
-    final List<XFile> picked = await picker.pickMultiImage(imageQuality: 80);
-    if (picked.isEmpty) return;
+    final List<XFile> picked = await picker.pickMultiImage(imageQuality: 85, maxWidth: 1920);
+    if (picked.isEmpty || !mounted) return;
+    // One photo: preview it in the 16:9 box it can be shown in (your first
+    // photo is the café's header) — whole, not cropped.
+    if (picked.length == 1) {
+      final use = await confirmPhoto(context, image: FileImage(File(picked.first.path)), aspectRatio: ImageRatios.banner, title: 'Add this photo?');
+      if (!use || !mounted) return;
+    }
 
     setState(() => _isUploading = true);
 
@@ -142,6 +150,7 @@ class _OwnerGalleryPageState extends State<OwnerGalleryPage> {
                       crossAxisCount: 3,
                       crossAxisSpacing: 8,
                       mainAxisSpacing: 8,
+                      childAspectRatio: 4 / 3,
                     ),
                     itemCount: shop.photoUrls.length,
                     itemBuilder: (context, index) {
@@ -150,17 +159,27 @@ class _OwnerGalleryPageState extends State<OwnerGalleryPage> {
                         children: [
                           ClipRRect(
                             borderRadius: BorderRadius.circular(10),
-                            child: Image.network(
+                            child: FittedImage.network(
                               url,
                               width: double.infinity,
                               height: double.infinity,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) => Container(
+                              fallback: Container(
                                 color: AppColors.primaryBrown.withOpacity(0.15),
-                                child: const Icon(Icons.broken_image_outlined, color: AppColors.primaryBrown),
+                                child: const Center(child: Icon(Icons.broken_image_outlined, color: AppColors.primaryBrown)),
                               ),
                             ),
                           ),
+                          // This photo is the café's header banner (no separate banner set).
+                          if (url == ShopBanner.urlFor(shop))
+                            Positioned(
+                              left: 4,
+                              bottom: 4,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(color: AppColors.primaryBrown, borderRadius: BorderRadius.circular(6)),
+                                child: const Text('Banner', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white)),
+                              ),
+                            ),
                           Positioned(
                             top: 4,
                             right: 4,

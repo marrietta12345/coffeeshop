@@ -18,6 +18,8 @@ class AuthTextField extends StatelessWidget {
   final String? Function(String?)? validator;
   final bool isRequired; // shows a red * after the label
   final List<TextInputFormatter>? inputFormatters;
+  final int maxLines; // > 1 for a multi-line field (e.g. a description)
+  final int? maxLength; // shows a character counter when set
 
   const AuthTextField({
     super.key,
@@ -31,6 +33,8 @@ class AuthTextField extends StatelessWidget {
     this.validator,
     this.isRequired = false,
     this.inputFormatters,
+    this.maxLines = 1,
+    this.maxLength,
   });
 
   @override
@@ -66,6 +70,8 @@ class AuthTextField extends StatelessWidget {
           keyboardType: keyboardType,
           validator: validator,
           inputFormatters: inputFormatters,
+          maxLines: maxLines,
+          maxLength: maxLength,
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),

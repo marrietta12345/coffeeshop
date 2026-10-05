@@ -3,6 +3,7 @@ import '../theme/app_colors.dart';
 import '../models/coffee_shop.dart';
 import 'shop_photo.dart';
 import 'open_status.dart';
+import 'fitted_image.dart';
 
 /// Compact card used in horizontal carousels — "Nearby Coffee Shops" on
 /// the map screen, "Popular Coffee Shops" on Explore. Photo, name,
@@ -20,6 +21,11 @@ class ShopMiniCard extends StatelessWidget {
     required this.onTap,
     this.width = 150,
   });
+
+  /// Height a carousel needs for cards [width] wide: the 4:3 photo plus
+  /// the name and rating lines, which grow with the phone's font size.
+  static double heightFor(double width, TextScaler textScaler) =>
+      width / ImageRatios.thumbnail + 22 + textScaler.scale(36);
 
   @override
   Widget build(BuildContext context) {
@@ -39,7 +45,7 @@ class ShopMiniCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             AspectRatio(
-              aspectRatio: 16 / 11,
+              aspectRatio: 4 / 3, // same box for every café, photo shown whole
               child: Stack(
                 fit: StackFit.expand,
                 children: [
@@ -59,19 +65,34 @@ class ShopMiniCard extends StatelessWidget {
                             color: Colors.white.withOpacity(0.92),
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: Row(
+                          child: Column(
                             mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Icon(Icons.local_mall_rounded, size: 11, color: AppColors.primaryBrown),
-                              const SizedBox(width: 3),
-                              Flexible(
-                                child: Text(
-                                  'Inside ${shop.mallName!.trim()}',
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.local_mall_rounded, size: 11, color: AppColors.primaryBrown),
+                                  const SizedBox(width: 3),
+                                  Flexible(
+                                    child: Text(
+                                      'Inside ${shop.mallName!.trim()}',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.textDark),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              // Floor · unit · landmark, so cafés in the same
+                              // mall are easy to tell apart.
+                              if (shop.mallDetails != null)
+                                Text(
+                                  shop.mallDetails!,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.textDark),
+                                  style: const TextStyle(fontSize: 9, color: AppColors.textGrey),
                                 ),
-                              ),
                             ],
                           ),
                         ),

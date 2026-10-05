@@ -26,10 +26,11 @@ class ReviewService {
   static CollectionReference<Map<String, dynamic>> _reviews(String shopId) =>
       _shopDoc(shopId).collection('reviews');
 
-  /// Live reviews for [shopId], newest first.
-  static Stream<List<Review>> reviewsStream(String shopId) {
-    return _reviews(shopId)
-        .orderBy('createdAt', descending: true)
+  /// Live reviews for [shopId], newest first ([limit] = only the latest).
+  static Stream<List<Review>> reviewsStream(String shopId, {int? limit}) {
+    var query = _reviews(shopId).orderBy('createdAt', descending: true);
+    if (limit != null) query = query.limit(limit);
+    return query
         .snapshots()
         .map((snap) => snap.docs.map(Review.fromFirestore).toList());
   }
@@ -40,6 +41,49 @@ class ReviewService {
     if (uid == null) return null;
     final doc = await _reviews(shopId).doc(uid).get();
     return doc.exists ? Review.fromFirestore(doc) : null;
+  }
+
+  /// Saves the shop owner's response to a review (replacing an earlier
+  /// one). Only the shop's owner may do this — see firestore.rules.
+  static Future<void> replyToReview({
+    required String shopId,
+    required String reviewId,
+    required String reply,
+    bool firstReply = false,
+  }) {
+    return _reviews(shopId).doc(reviewId).update(_replyFields(reply, firstReply: firstReply));
+  }
+
+  /// The owner's response: [reply], who wrote it (their uid — for security,
+  /// never shown) and when. [firstReply] also records when it was first
+  /// written; an edit keeps that date.
+  static Map<String, dynamic> _replyFields(String reply, {required bool firstReply}) => {
+        'ownerReply': reply.trim(),
+        'ownerReplyBy': FirebaseAuth.instance.currentUser?.uid,
+        'ownerRepliedAt': FieldValue.serverTimestamp(),
+        if (firstReply) 'ownerReplyCreatedAt': FieldValue.serverTimestamp(),
+      };
+
+  static Map<String, dynamic> get _noReply => {
+    'ownerReply': FieldValue.delete(),
+    'ownerReplyBy': FieldValue.delete(),
+    'ownerRepliedAt': FieldValue.delete(),
+    'ownerReplyCreatedAt': FieldValue.delete(),
+  };
+
+
+  /// Removes the owner's response from a review (it shows as Needs Reply
+  /// again).
+  static Future<void> deleteReply({required String shopId, required String reviewId}) {
+    return _reviews(shopId).doc(reviewId).update(_noReply);
+  }
+
+  /// The shop owner's private "appreciate" heart on a review (not a public
+  /// like count). Only the shop's owner may set it — see firestore.rules.
+  static Future<void> setOwnerHeart({required String shopId, required String reviewId, required bool hearted}) {
+    return _reviews(shopId).doc(reviewId).update({
+      'ownerHearted': hearted ? true : FieldValue.delete(),
+    });
   }
 
   /// Posts (or updates) the signed-in user's review of [shop].
@@ -125,6 +169,7 @@ class ReviewService {
         'rating': rating,
         'text': text,
         'photoUrl': photoUrl,
+        'userPhotoUrl': (user.photoURL?.isNotEmpty ?? false) ? user.photoURL : null,
         'likes': (oldReview.data()?['likes'] as num?)?.toInt() ?? 0,
         'createdAt': FieldValue.serverTimestamp(),
       });

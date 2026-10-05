@@ -24,6 +24,7 @@ class CoffeeShop {
   final String? bannerUrl;
   final int viewCount;
   final int favoritesCount;
+  final int reviewCount; // number of customer reviews (kept by ReviewService)
   final DateTime? createdAt;
   final String? phoneNumber;
   final String? website;
@@ -34,9 +35,12 @@ class CoffeeShop {
   // 'mall' or 'standalone' (from Business Sign Up's Location Type). Older
   // cafés may not have it — then a mall name means it's inside a mall.
   final String? locationType;
-  // Set only for cafés located inside a mall; all optional.
+  // Set only for cafés located inside a mall. The mall is a shared
+  // location (malls/{mallId}); the café stays its own business.
+  final String? mallId; // key of the malls/{mallId} record
   final String? mallName;
-  final String? mallFloor; // e.g. "2nd Floor"
+  final String? mallFloor; // e.g. "2nd Floor", or a custom one like "10th Floor"
+  final String? mallUnit; // optional, e.g. "204" or "Unit 204"
   final String? mallLandmark; // e.g. "Near the cinema entrance"
   // What the café offers, set by its owner — matched against customers'
   // Coffee Preferences for "Recommended for You". Values use the same
@@ -68,6 +72,7 @@ class CoffeeShop {
     this.bannerUrl,
     this.viewCount = 0,
     this.favoritesCount = 0,
+    this.reviewCount = 0,
     this.createdAt,
     this.phoneNumber,
     this.website,
@@ -75,8 +80,10 @@ class CoffeeShop {
     this.instagramUrl,
     this.tiktokUrl,
     this.locationType,
+    this.mallId,
     this.mallName,
     this.mallFloor,
+    this.mallUnit,
     this.mallLandmark,
     this.coffeeTypes = const [],
     this.atmospheres = const [],
@@ -111,6 +118,7 @@ class CoffeeShop {
       bannerUrl: data['bannerUrl'] as String?,
       viewCount: (data['viewCount'] as num?)?.toInt() ?? 0,
       favoritesCount: (data['favoritesCount'] as num?)?.toInt() ?? 0,
+      reviewCount: (data['reviewCount'] as num?)?.toInt() ?? 0,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
       phoneNumber: data['phoneNumber'] as String?,
       website: data['website'] as String?,
@@ -118,8 +126,10 @@ class CoffeeShop {
       instagramUrl: data['instagramUrl'] as String?,
       tiktokUrl: data['tiktokUrl'] as String?,
       locationType: data['locationType'] as String?,
+      mallId: data['mallId'] as String?,
       mallName: data['mallName'] as String?,
       mallFloor: data['mallFloor'] as String?,
+      mallUnit: data['mallUnit'] as String?,
       mallLandmark: data['mallLandmark'] as String?,
       coffeeTypes: _stringList(data['coffeeTypes']),
       atmospheres: _stringList(data['atmospheres']),
@@ -147,15 +157,34 @@ class CoffeeShop {
     return parts.isEmpty ? 'Inside $mall' : 'Inside $mall, ${parts.last}';
   }
 
-  /// Floor and landmark inside the mall, e.g. "2nd Floor · Near the Food
-  /// Court" — null when the café isn't in a mall or neither detail is set.
+  /// Floor, unit and landmark inside the mall on one line, e.g. "2nd Floor
+  /// · Unit 204 · Near the Food Court" (for cards and the map) — null when
+  /// the café isn't in a mall or none of them is set.
   String? get mallDetails {
     if (!isInMall) return null;
-    final details = [mallFloor, mallLandmark]
+    final details = [mallFloor, unitLabel, mallLandmark]
         .map((d) => d?.trim() ?? '')
         .where((d) => d.isNotEmpty)
         .toList();
     return details.isEmpty ? null : details.join(' · ');
+  }
+
+  /// Floor and unit, e.g. "2nd Floor · Unit 204" (café details page).
+  String? get mallFloorAndUnit {
+    if (!isInMall) return null;
+    final parts = [mallFloor?.trim() ?? '', unitLabel ?? ''].where((p) => p.isNotEmpty).toList();
+    return parts.isEmpty ? null : parts.join(' · ');
+  }
+
+  /// The unit as customers read it: "204" → "Unit 204"; "Stall 3B" or
+  /// "Kiosk 2" stay as typed. Null when there's no unit.
+  String? get unitLabel => formatUnit(mallUnit);
+
+  static String? formatUnit(String? unit) {
+    final value = unit?.trim() ?? '';
+    if (value.isEmpty) return null;
+    if (RegExp(r'^[A-Za-z]{2,}').hasMatch(value) && !RegExp(r'^[A-Za-z]{1,2}-?\d').hasMatch(value)) return value;
+    return 'Unit $value';
   }
 
   String get categoryLabel {

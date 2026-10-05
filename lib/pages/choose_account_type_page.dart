@@ -52,7 +52,12 @@ class ChooseAccountTypePage extends StatelessWidget {
                   ),
                 ),
                 Expanded(
-                  child: Padding(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) => SingleChildScrollView(
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                        child: IntrinsicHeight(
+                          child: Padding(
                     padding: EdgeInsets.fromLTRB(horizontalPadding, 8, horizontalPadding, 24),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -149,6 +154,9 @@ class ChooseAccountTypePage extends StatelessWidget {
                           ],
                         ),
                       ],
+                    ),
+                  )),
+                      ),
                     ),
                   ),
                 ),

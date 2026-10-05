@@ -43,6 +43,8 @@
         </intent>
     </queries>
 
+    <!-- Maps, directions routes, Firebase and images (debug builds add this automatically; release builds need it). -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
 </manifest>

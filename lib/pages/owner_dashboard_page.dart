@@ -3,15 +3,25 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../theme/app_colors.dart';
 import '../models/coffee_shop.dart';
 import '../utils/owner_shop_service.dart';
+import '../widgets/owner_activity_section.dart';
 
-/// Coffee Shop Owner's dashboard — greeting, and real today's-overview
-/// stats (profile views, favorites) pulled live from Firestore. Review
-/// count and a true activity feed need a review-persistence feature that
-/// doesn't exist yet (reviews currently live only in the viewer's local
-/// session on the customer side) — shown honestly as 0 / empty rather
-/// than fabricated numbers.
-class OwnerDashboardPage extends StatelessWidget {
-  const OwnerDashboardPage({super.key});
+/// Coffee Shop Owner's dashboard — greeting, an all-time Shop Overview
+/// (rating, total reviews, total favorites), an aggregated Activity Summary (Today / 7 Days /
+/// 30 Days) and Recent Reviews with owner responses. Pull down to refresh.
+class OwnerDashboardPage extends StatefulWidget {
+  final VoidCallback? onViewAllReviews; // switches to the Reviews tab
+
+  const OwnerDashboardPage({super.key, this.onViewAllReviews});
+
+  @override
+  State<OwnerDashboardPage> createState() => _OwnerDashboardPageState();
+}
+
+class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
+  final _activityKey = GlobalKey<OwnerActivitySectionState>();
+  // Created once — a new stream on every rebuild would flash the loader
+  // and reset the Activity filter.
+  final Stream<CoffeeShop?> _shopStream = OwnerShopService.myShopStream();
 
   String get _greeting {
     final hour = DateTime.now().hour;
@@ -29,7 +39,7 @@ class OwnerDashboardPage extends StatelessWidget {
       color: const Color(0xFFFAF8F5),
       child: SafeArea(
         child: StreamBuilder<CoffeeShop?>(
-          stream: OwnerShopService.myShopStream(),
+          stream: _shopStream,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator(color: AppColors.primaryBrown));
@@ -49,7 +59,11 @@ class OwnerDashboardPage extends StatelessWidget {
               );
             }
 
-            return ListView(
+            return RefreshIndicator(
+              color: AppColors.primaryBrown,
+              onRefresh: () => _activityKey.currentState?.reload() ?? Future.value(),
+              child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
               children: [
                 Row(
@@ -91,60 +105,32 @@ class OwnerDashboardPage extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text("Today's Overview", style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700)),
+                      const Text('Shop Overview', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700)),
                       const SizedBox(height: 2),
                       Text(
-                        _formattedDate(),
+                        'All-time',
                         style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 12),
                       ),
                       const SizedBox(height: 18),
                       Row(
                         children: [
-                          _StatColumn(label: 'Profile Views', value: '${shop.viewCount}'),
-                          _StatColumn(label: 'Favorites', value: '${shop.favoritesCount}'),
                           _StatColumn(label: 'Rating', value: shop.rating > 0 ? shop.rating.toStringAsFixed(1) : '—'),
+                          _StatColumn(label: 'Total Reviews', value: '${shop.reviewCount}'),
+                          _StatColumn(label: 'Total Favorites', value: '${shop.favoritesCount < 0 ? 0 : shop.favoritesCount}'),
                         ],
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(height: 28),
-                const Text('Activity', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.textDark)),
-                const SizedBox(height: 12),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Column(
-                    children: [
-                      Icon(Icons.timeline_rounded, size: 32, color: AppColors.textGrey.withOpacity(0.4)),
-                      const SizedBox(height: 10),
-                      const Text(
-                        'Activity will appear here as customers view your shop,\nsave it, or leave a review.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 12.5, color: AppColors.textGrey, height: 1.5),
-                      ),
-                    ],
-                  ),
-                ),
+                OwnerActivitySection(key: _activityKey, shop: shop, onViewAllReviews: widget.onViewAllReviews),
               ],
+              ),
             );
           },
         ),
       ),
     );
-  }
-
-  String _formattedDate() {
-    const months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December',
-    ];
-    final now = DateTime.now();
-    return '${months[now.month - 1]} ${now.day}, ${now.year}';
   }
 }
 

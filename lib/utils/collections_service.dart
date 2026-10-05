@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/shop_collection.dart';
+import 'shop_activity_service.dart';
 
 /// The user's collections, stored under `users/{uid}/collections/`:
 ///  * the 8 built-in categories — doc id = category id, `{name, shopIds}`,
@@ -77,6 +78,7 @@ class CollectionsService {
       ..._nameFor(collectionId),
       'shopIds': FieldValue.arrayUnion([shopId]),
     }, SetOptions(merge: true));
+    ShopActivityService.syncCollectionSaves([shopId]);
   }
 
   static Future<void> removeShop(String collectionId, String shopId) async {
@@ -84,6 +86,7 @@ class CollectionsService {
       ..._nameFor(collectionId),
       'shopIds': FieldValue.arrayRemove([shopId]),
     }, SetOptions(merge: true));
+    ShopActivityService.syncCollectionSaves([shopId]);
   }
 
   /// Built-in categories always (re)write their fixed name so their doc
@@ -106,6 +109,7 @@ class CollectionsService {
       'custom': true,
       'createdAt': FieldValue.serverTimestamp(),
     });
+    ShopActivityService.syncCollectionSaves(shopIds);
   }
 
   /// Starts a built-in category (from Create Collection), optionally with
@@ -119,6 +123,7 @@ class CollectionsService {
     } else if (shopIds.isNotEmpty) {
       await doc.set({'name': category.name, 'shopIds': FieldValue.arrayUnion(shopIds)}, SetOptions(merge: true));
     }
+    ShopActivityService.syncCollectionSaves(shopIds);
   }
 
   static Future<void> updateCustom(String collectionId, {required String name, required String iconKey}) async {
@@ -129,7 +134,11 @@ class CollectionsService {
   /// Removes a collection from the user's list (a built-in category just
   /// goes back to being an unused suggestion).
   static Future<void> deleteCollection(String collectionId) async {
-    await _collection()?.doc(collectionId).delete();
+    final doc = _collection()?.doc(collectionId);
+    if (doc == null) return;
+    final shopIds = (((await doc.get()).data()?['shopIds'] as List?) ?? const []).map((e) => e.toString());
+    await doc.delete();
+    ShopActivityService.syncCollectionSaves(shopIds);
   }
 
   static final Set<String> _migratedUsers = {};

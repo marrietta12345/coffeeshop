@@ -4,9 +4,9 @@ import '../models/coffee_shop.dart';
 import '../models/menu_item.dart';
 import '../widgets/menu_item_image.dart';
 
-/// Full "Best Sellers" listing for a single shop — every menu item
-/// sorted by likes, most-loved first. Reached via "See all" from the
-/// Menu tab's Most Loved section.
+/// Full "Popular Coffee" listing for a single shop — every coffee sorted
+/// by customer hearts, most-loved first (Kafelo doesn't track sales).
+/// Reached via "See all" from the Menu tab's Popular Coffee section.
 class BestSellersPage extends StatelessWidget {
   final CoffeeShop shop;
   final List<MenuItem> menuItems;
@@ -32,7 +32,7 @@ class BestSellersPage extends StatelessWidget {
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    '${shop.name} — Best Sellers',
+                    '${shop.name} — Popular Coffee',
                     style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.textDark),
                   ),
                 ],
@@ -80,7 +80,7 @@ class _BestSellerListItem extends StatelessWidget {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: MenuItemImage(item: item, shop: shop, fallbackIndex: rank + 30, width: 64, height: 64),
+            child: MenuItemImage(item: item, shop: shop, fallbackIndex: rank + 30, width: 72, height: 54),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -93,7 +93,7 @@ class _BestSellerListItem extends StatelessWidget {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  item.description,
+                  item.available ? item.description : 'Currently unavailable',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontSize: 12, color: AppColors.textGrey),
@@ -113,7 +113,7 @@ class _BestSellerListItem extends StatelessWidget {
                       const SizedBox(width: 5),
                     ],
                     Text(
-                      '₱${item.price.toStringAsFixed(0)}',
+                      MenuItem.formatPrice(item.price),
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w800,

@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:image_picker/image_picker.dart';
+import '../widgets/fitted_image.dart';
 import '../theme/app_colors.dart';
 import '../widgets/open_status.dart';
 import '../models/coffee_shop.dart';
@@ -87,15 +88,16 @@ class OwnerShopProfilePage extends StatelessWidget {
                   Stack(
                     clipBehavior: Clip.none,
                     children: [
-                      ShopPhoto(shop: shop, width: double.infinity, height: 190),
+                      // Same 16:9 box customers see on the café page.
+                      AspectRatio(
+                        aspectRatio: ImageRatios.banner,
+                        child: ShopBanner(shop: shop, width: double.infinity, height: double.infinity),
+                      ),
+                      // Banner edits sit on the banner (the gallery is in the row below).
                       Positioned(
                         top: 12,
                         right: 12,
-                        child: _WhitePillButton(
-                          icon: Icons.edit_outlined,
-                          label: 'Edit',
-                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => OwnerGalleryPage(shop: shop))),
-                        ),
+                        child: _ChangeBannerButton(shop: shop),
                       ),
                       Positioned(
                         bottom: -28,
@@ -231,6 +233,61 @@ class OwnerShopProfilePage extends StatelessWidget {
   }
 }
 
+/// Picks a new banner, previews it in the 16:9 header shape (Cancel / Use
+/// Image), uploads it to the café's own banners/ folder and saves it on
+/// the café. Only the signed-in owner's café is ever changed.
+class _ChangeBannerButton extends StatefulWidget {
+  final CoffeeShop shop;
+
+  const _ChangeBannerButton({required this.shop});
+
+  @override
+  State<_ChangeBannerButton> createState() => _ChangeBannerButtonState();
+}
+
+class _ChangeBannerButtonState extends State<_ChangeBannerButton> {
+  bool _busy = false;
+
+  Future<void> _change() async {
+    final picked = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 85, maxWidth: 1920);
+    if (picked == null || !mounted) return;
+    final file = File(picked.path);
+    final use = await confirmPhoto(context, image: FileImage(file), aspectRatio: ImageRatios.banner, title: 'Use this banner?');
+    if (!use || !mounted) return;
+
+    setState(() => _busy = true);
+    final oldUrl = widget.shop.bannerUrl;
+    try {
+      // A new file name each time, so phones don't keep showing the old one.
+      final url = await SupabaseImageService.uploadImage(
+        file: file,
+        folder: 'banners',
+        shopId: widget.shop.id,
+        fileName: 'banner_${DateTime.now().millisecondsSinceEpoch}.jpg',
+      );
+      await FirebaseFirestore.instance.collection('shops').doc(widget.shop.id).update({'bannerUrl': url});
+      if (oldUrl != null && oldUrl.isNotEmpty && oldUrl != url) {
+        SupabaseImageService.deleteImageByUrl(oldUrl).catchError((Object e) => debugPrint('Old banner cleanup failed: $e'));
+      }
+      if (mounted) showTopBanner(context, 'Banner updated!', isSuccess: true);
+    } catch (e) {
+      debugPrint('Banner upload failed: $e');
+      if (mounted) showTopBanner(context, "Couldn't update your banner. Please try again.", isSuccess: false);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _WhitePillButton(
+      icon: _busy ? Icons.hourglass_top_rounded : Icons.panorama_outlined,
+      label: _busy ? 'Uploading…' : 'Change Banner',
+      onTap: _busy ? () {} : _change,
+    );
+  }
+}
+
 class _WhitePillButton extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -310,8 +367,10 @@ class _ShopLogoAvatarState extends State<_ShopLogoAvatar> {
 
   Future<void> _pickAndUploadLogo() async {
     final picker = ImagePicker();
-    final XFile? picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
-    if (picked == null) return;
+    final XFile? picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 90, maxWidth: 800);
+    if (picked == null || !mounted) return;
+    final use = await confirmPhoto(context, image: FileImage(File(picked.path)), aspectRatio: ImageRatios.square, title: 'Use this logo?');
+    if (!use || !mounted) return;
 
     setState(() => _isUploading = true);
     try {

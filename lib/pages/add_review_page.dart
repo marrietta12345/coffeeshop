@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import '../widgets/fitted_image.dart';
 import '../theme/app_colors.dart';
 import '../models/coffee_shop.dart';
 import '../models/review.dart';
@@ -317,16 +318,10 @@ class _PhotoPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // The whole photo, never cropped or stretched.
     final Widget image = photo != null
-        ? Image.file(photo!, fit: BoxFit.cover)
-        : Image.network(
-            photoUrl ?? '',
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) => Container(
-              color: AppColors.inputFill,
-              child: const Icon(Icons.image_outlined, color: AppColors.textGrey),
-            ),
-          );
+        ? FittedImage(image: FileImage(photo!), width: double.infinity, height: 160)
+        : FittedImage.network(photoUrl ?? '', width: double.infinity, height: 160);
 
     return Stack(
       children: [

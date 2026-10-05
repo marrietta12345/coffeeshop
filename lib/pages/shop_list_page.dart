@@ -101,7 +101,7 @@ class ShopListCard extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(10),
-              child: ShopPhoto(shop: shop, width: 64, height: 64),
+              child: ShopPhoto(shop: shop, width: 72, height: 54),
             ),
             const SizedBox(width: 12),
             Expanded(

@@ -41,6 +41,25 @@ class FormValidators {
     return null;
   }
 
+  /// Highest menu price accepted (₱).
+  static const double maxPrice = 99999;
+
+  /// A peso price like "120" or "120.50": required, a number, not
+  /// negative, above ₱0, at most 2 decimal places.
+  static String? price(String? value) {
+    final v = (value ?? '').trim().replaceAll(',', '');
+    if (v.isEmpty) return requiredMessage;
+    if (v.startsWith('-')) return 'Price cannot be negative.';
+    final parsed = double.tryParse(v);
+    if (parsed == null || !RegExp(r'^\d+(\.\d{1,2})?$').hasMatch(v)) return 'Please enter a valid price (e.g. 120 or 120.50).';
+    if (parsed <= 0) return 'Price must be more than ₱0.';
+    if (parsed > maxPrice) return 'Price must be ₱99,999 or less.';
+    return null;
+  }
+
+  /// The price typed in [value] (after [price] passed), e.g. "1,250.5" → 1250.5.
+  static double parsePrice(String value) => double.parse(value.trim().replaceAll(',', ''));
+
   /// Puts a Philippine mobile number into +639XXXXXXXXX form, accepting
   /// the common ways people type it (09…, 9…, 639…, +63 9…, spaces or
   /// dashes). Returns '' when nothing was entered.
