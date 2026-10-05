@@ -144,7 +144,7 @@ class _CoffeeReviewFormPageState extends State<CoffeeReviewFormPage> {
                           ClipRRect(
                             borderRadius: BorderRadius.circular(12),
                             child: widget.coffee.hasImage
-                                ? FittedImage.network(widget.coffee.imageUrl!, width: 48, height: 36, fallback: _cupTile())
+                                ? FittedImage.network(widget.coffee.imageUrl!, width: 48, height: 36, fit: BoxFit.cover, fallback: _cupTile())
                                 : _cupTile(),
                           ),
                           const SizedBox(width: 12),

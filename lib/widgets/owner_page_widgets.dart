@@ -147,7 +147,7 @@ class OwnerSegmentedFilter<T> extends StatelessWidget {
 }
 
 /// A coffee's photo in a fixed 4:3 box ([size] wide) — the real uploaded
-/// image shown whole, or a plain coffee-cup tile when it has none (never a
+/// image filling the box, or a plain coffee-cup tile when it has none (never a
 /// stock photo). Greyed out when unavailable.
 class CoffeeThumb extends StatelessWidget {
   final MenuItem item;
@@ -165,7 +165,7 @@ class CoffeeThumb extends StatelessWidget {
       child: Icon(Icons.local_cafe_rounded, color: AppColors.primaryBrown, size: height * 0.45),
     );
     Widget image = item.hasImage
-        ? FittedImage.network(item.imageUrl!, width: size, height: height, fallback: placeholder)
+        ? FittedImage.network(item.imageUrl!, width: size, height: height, fit: BoxFit.cover, fallback: placeholder)
         : placeholder;
     if (!item.available) {
       image = ColorFiltered(

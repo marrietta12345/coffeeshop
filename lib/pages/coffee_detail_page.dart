@@ -10,6 +10,7 @@ import '../utils/page_transitions.dart';
 import '../widgets/coffee_badges.dart';
 import '../widgets/coffee_review_widgets.dart';
 import '../widgets/menu_item_image.dart';
+import '../widgets/shop_gallery.dart';
 import '../widgets/top_banner.dart';
 import 'coffee_review_form_page.dart';
 import 'coffee_reviews_page.dart';
@@ -94,12 +95,15 @@ class _CoffeeDetailPageState extends State<CoffeeDetailPage> {
             children: [
               ClipRRect(
                 borderRadius: const BorderRadius.vertical(bottom: Radius.circular(28)),
-                // Same 4:3 box as the menu; the whole photo is shown.
+                // Same 4:3 box as the menu, filled; tap to see the whole photo.
                 child: AspectRatio(
                   aspectRatio: ImageRatios.coffee,
-                  child: Opacity(
-                    opacity: _item.available ? 1 : 0.5,
-                    child: MenuItemImage(item: _item, shop: widget.shop, fallbackIndex: 0, width: double.infinity, height: double.infinity),
+                  child: GestureDetector(
+                    onTap: _item.hasImage ? () => openPhotoViewer(context, [_item.imageUrl!]) : null,
+                    child: Opacity(
+                      opacity: _item.available ? 1 : 0.5,
+                      child: MenuItemImage(item: _item, shop: widget.shop, fallbackIndex: 0, width: double.infinity, height: double.infinity),
+                    ),
                   ),
                 ),
               ),

@@ -277,18 +277,18 @@ class _ExplorePageState extends State<ExplorePage> with WidgetsBindingObserver {
       title: title,
       shops: [for (final r in recommendations) r.shop],
       emptyText: 'No cafés match your Coffee Preferences yet.',
-      cardLabel: (shop, distance) => '${percentById[shop.id] ?? 0}% Match for You',
+      matchPercentFor: (shop) => percentById[shop.id],
     );
   }
 
   /// Section header with a working "View all", then a horizontal card
   /// carousel of [shops] (or a muted note when there are none).
-  /// [cardLabel] customizes each card's small line (defaults to distance).
+  /// [matchPercentFor] adds the ✨ match % pill on each card's photo.
   List<Widget> _shopCarouselSection({
     required String title,
     required List<CoffeeShop> shops,
     required String emptyText,
-    String Function(CoffeeShop shop, String distance)? cardLabel,
+    int? Function(CoffeeShop shop)? matchPercentFor,
   }) {
     return [
       Row(
@@ -324,7 +324,8 @@ class _ExplorePageState extends State<ExplorePage> with WidgetsBindingObserver {
               final distance = formatDistance(_userLocation, LatLng(shop.latitude, shop.longitude));
               return ShopMiniCard(
                 shop: shop,
-                distanceLabel: cardLabel?.call(shop, distance) ?? distance,
+                distanceLabel: distance,
+                matchPercent: matchPercentFor?.call(shop),
                 onTap: () => _openShop(shop),
               );
             },

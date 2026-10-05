@@ -5,8 +5,8 @@ import '../models/menu_item.dart';
 import 'fitted_image.dart';
 
 /// Displays a menu item's photo — the real uploaded image (Supabase
-/// Storage), shown whole inside its box (never stretched or cropped), or a
-/// plain coffee-cup tile when it has none (never a stand-in photo).
+/// Storage), filling its box (centered, like food apps), or a plain
+/// coffee-cup tile when it has none (never a stand-in photo).
 class MenuItemImage extends StatelessWidget {
   final MenuItem item;
   final CoffeeShop shop;
@@ -26,7 +26,7 @@ class MenuItemImage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (item.imageUrl != null && item.imageUrl!.isNotEmpty) {
-      return FittedImage.network(item.imageUrl!, width: width, height: height, fallback: _placeholder());
+      return FittedImage.network(item.imageUrl!, width: width, height: height, fit: BoxFit.cover, fallback: _placeholder());
     }
     return _placeholder();
   }

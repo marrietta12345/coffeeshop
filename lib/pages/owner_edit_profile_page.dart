@@ -7,6 +7,7 @@ import '../widgets/auth_text_field.dart';
 import '../widgets/category_chip.dart';
 import '../widgets/top_banner.dart';
 import '../widgets/shop_location_section.dart';
+import '../widgets/business_permit_section.dart';
 import '../utils/form_validators.dart';
 import '../utils/user_profile_service.dart';
 import '../utils/online_links.dart';
@@ -16,7 +17,8 @@ import '../utils/online_links.dart';
 /// address, GPS — same fields and rules as sign-up), and its Café Features
 /// (coffee types, atmosphere, must-haves) that customers' Coffee
 /// Preferences are matched against for "Recommended for You". Writes
-/// straight to the shop's Firestore document.
+/// straight to the shop's Firestore document. Also the optional Business
+/// Permit (image or PDF), kept private on the owner's own profile.
 class OwnerEditProfilePage extends StatefulWidget {
   final CoffeeShop shop;
 
@@ -36,6 +38,7 @@ class _OwnerEditProfilePageState extends State<OwnerEditProfilePage> {
   late final TextEditingController _instagramController;
   late final TextEditingController _tiktokController;
   late final ShopLocationController _location = ShopLocationController(shop: widget.shop);
+  late final BusinessPermitController _permit = BusinessPermitController(shopId: widget.shop.id);
   late final Set<String> _coffeeTypes = {...widget.shop.coffeeTypes};
   late final Set<String> _atmospheres = {...widget.shop.atmospheres};
   late final Set<String> _amenities = {...widget.shop.amenities};
@@ -56,6 +59,7 @@ class _OwnerEditProfilePageState extends State<OwnerEditProfilePage> {
     _instagramController = TextEditingController(text: widget.shop.instagramUrl ?? '');
     _tiktokController = TextEditingController(text: widget.shop.tiktokUrl ?? '');
     if ((widget.shop.phoneNumber ?? '').trim().isEmpty) _loadSignUpPhone();
+    _permit.load();
   }
 
   /// Shows a saved number in +639XXXXXXXXX form (or just the +639 prefix
@@ -103,6 +107,7 @@ class _OwnerEditProfilePageState extends State<OwnerEditProfilePage> {
     _instagramController.dispose();
     _tiktokController.dispose();
     _location.dispose();
+    _permit.dispose();
     super.dispose();
   }
 
@@ -116,6 +121,18 @@ class _OwnerEditProfilePageState extends State<OwnerEditProfilePage> {
       return;
     }
     setState(() => _isSaving = true);
+
+    // The permit is optional — this only uploads or removes it when the
+    // owner changed it.
+    try {
+      await _permit.commit();
+    } catch (e) {
+      debugPrint('Could not save business permit: $e');
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      showTopBanner(context, "Couldn't upload your business permit. Please try again.", isSuccess: false);
+      return;
+    }
 
     try {
       // Location type, mall details, address and the café's own GPS spot.
@@ -292,6 +309,8 @@ class _OwnerEditProfilePageState extends State<OwnerEditProfilePage> {
                             onTap: () => _toggleIn(_amenities, entry.key),
                           ),
                       ]),
+                      const SizedBox(height: 28),
+                      BusinessPermitSection(controller: _permit),
                       const SizedBox(height: 28),
                       AuthSubmitButton(label: 'Save Changes', isLoading: _isSaving, onPressed: _save),
                     ],

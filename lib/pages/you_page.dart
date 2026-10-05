@@ -7,6 +7,7 @@ import 'welcome_page.dart';
 import 'saved_shops_page.dart';
 import 'account_settings_page.dart';
 import 'visited_cafes_page.dart';
+import 'my_reviews_page.dart';
 
 /// Profile tab content. Plain widget (no Scaffold/bottom nav of its own)
 /// — MainNavPage supplies those, which is what makes Explore <-> You
@@ -111,7 +112,11 @@ class YouPage extends StatelessWidget {
                 label: 'My Favorites',
                 onTap: () => Navigator.push(context, slideUpRoute(const SavedShopsPage())),
               ),
-              const ProfileMenuTile(icon: Icons.rate_review_outlined, label: 'My Reviews'),
+              ProfileMenuTile(
+                icon: Icons.rate_review_outlined,
+                label: 'My Reviews',
+                onTap: () => Navigator.push(context, slideFadeRoute(const MyReviewsPage())),
+              ),
               ProfileMenuTile(
                 icon: Icons.settings_outlined,
                 label: 'Account Settings',

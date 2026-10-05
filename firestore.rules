@@ -19,6 +19,9 @@ rules_version = '2';
 //   shops/{shopId}/activity/{uid}    one engagement record per user per café
 //                                    (views, favorite, collection save) —
 //                                    readable only by that café's owner
+//   {path=**}/reviews, {path=**}/coffeeReviews
+//                                    collection-group reads for Profile →
+//                                    My Reviews (a user's own reviews only)
 //
 // Images live in Supabase Storage, not here — these rules don't cover them.
 service cloud.firestore {
@@ -422,6 +425,19 @@ service cloud.firestore {
 
         allow delete: if false;
       }
+    }
+
+    // ------------------------------------------------------------------
+    // My Reviews — the signed-in user lists their own café and coffee
+    // reviews across every café (collection-group queries filtered by
+    // userId). Read-only; all writes go through the shop rules above.
+    // ------------------------------------------------------------------
+    match /{path=**}/reviews/{reviewId} {
+      allow read: if signedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    match /{path=**}/coffeeReviews/{reviewId} {
+      allow read: if signedIn() && resource.data.userId == request.auth.uid;
     }
   }
 }

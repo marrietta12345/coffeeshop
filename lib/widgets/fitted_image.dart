@@ -6,6 +6,11 @@ import '../theme/app_colors.dart';
 /// stretched, never cropped. Any space left over is a soft neutral
 /// backdrop, so different photo shapes still give identical cards.
 ///
+/// Exception — coffee (menu) photos FILL their 4:3 box (BoxFit.cover,
+/// centered), like food apps: a clean, uniform menu. The owner sees the
+/// exact framing before saving, and customers can tap the Coffee Details
+/// photo to see it whole.
+///
 /// Standard containers:
 ///   café header / banner    16:9
 ///   coffee & café images     4:3   (menu, details, thumbnails)
@@ -30,11 +35,13 @@ class FittedImage extends StatelessWidget {
   final double? width;
   final double? height;
   final Widget? fallback; // shown if the image fails to load
+  final BoxFit fit; // contain = whole photo; cover = fills the box (coffee photos)
 
-  const FittedImage({super.key, required this.image, this.width, this.height, this.fallback});
+  const FittedImage({super.key, required this.image, this.width, this.height, this.fallback, this.fit = BoxFit.contain});
 
   /// A network photo (Supabase Storage URL).
-  FittedImage.network(String url, {super.key, this.width, this.height, this.fallback}) : image = NetworkImage(url);
+  FittedImage.network(String url, {super.key, this.width, this.height, this.fallback, this.fit = BoxFit.contain})
+      : image = NetworkImage(url);
 
   @override
   Widget build(BuildContext context) {
@@ -46,7 +53,7 @@ class FittedImage extends StatelessWidget {
         image: image,
         width: width,
         height: height,
-        fit: BoxFit.contain,
+        fit: fit,
         loadingBuilder: (context, child, progress) {
           if (progress == null) return child;
           return const Center(
@@ -68,6 +75,7 @@ Future<bool> confirmPhoto(
   required ImageProvider image,
   required double aspectRatio,
   String title = 'Use this photo?',
+  BoxFit fit = BoxFit.contain,
 }) async {
   final use = await showModalBottomSheet<bool>(
     context: context,
@@ -83,9 +91,12 @@ Future<bool> confirmPhoto(
           children: [
             Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.textDark)),
             const SizedBox(height: 4),
-            const Text(
-              'This is how it will look. Your whole photo is kept — nothing is cropped or stretched.',
-              style: TextStyle(fontSize: 12, color: AppColors.textGrey, height: 1.4),
+            Text(
+              fit == BoxFit.cover
+                  ? 'This is how it will look on your menu. The photo fills the frame, so the edges may be trimmed — '
+                      'square or landscape photos look best.'
+                  : 'This is how it will look. Your whole photo is kept — nothing is cropped or stretched.',
+              style: const TextStyle(fontSize: 12, color: AppColors.textGrey, height: 1.4),
             ),
             const SizedBox(height: 14),
             // The real display box, kept small enough to fit short (landscape) screens.
@@ -96,7 +107,7 @@ Future<bool> confirmPhoto(
                   borderRadius: BorderRadius.circular(14),
                   child: AspectRatio(
                     aspectRatio: aspectRatio,
-                    child: FittedImage(image: image, width: double.infinity, height: double.infinity),
+                    child: FittedImage(image: image, width: double.infinity, height: double.infinity, fit: fit),
                   ),
                 ),
               ),

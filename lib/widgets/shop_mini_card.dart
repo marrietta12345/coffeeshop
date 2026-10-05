@@ -6,13 +6,16 @@ import 'open_status.dart';
 import 'fitted_image.dart';
 
 /// Compact card used in horizontal carousels — "Nearby Coffee Shops" on
-/// the map screen, "Popular Coffee Shops" on Explore. Photo, name,
-/// rating, and a distance label.
+/// the map screen, "Popular Coffee Shops" / "Recommended for You" on
+/// Explore. Clean photo (only the open status, plus the ✨ match % when
+/// given), then name, rating · distance, and where it is (mall + floor,
+/// or the street address) below.
 class ShopMiniCard extends StatelessWidget {
   final CoffeeShop shop;
-  final String distanceLabel;
+  final String distanceLabel; // e.g. "0.8 km away" (shown as "0.8 km")
   final VoidCallback onTap;
   final double width;
+  final int? matchPercent; // "Recommended for You" only
 
   const ShopMiniCard({
     super.key,
@@ -20,15 +23,24 @@ class ShopMiniCard extends StatelessWidget {
     required this.distanceLabel,
     required this.onTap,
     this.width = 150,
+    this.matchPercent,
   });
 
   /// Height a carousel needs for cards [width] wide: the 4:3 photo plus
-  /// the name and rating lines, which grow with the phone's font size.
+  /// the name, rating and location lines, which grow with the font size.
   static double heightFor(double width, TextScaler textScaler) =>
-      width / ImageRatios.thumbnail + 22 + textScaler.scale(36);
+      width / ImageRatios.thumbnail + 25 + textScaler.scale(51);
+
+  /// "SM Butuan · Ground Floor · Unit 12" for mall cafés, else the address.
+  String get _locationLine {
+    if (!shop.isInMall) return shop.address.trim();
+    return [shop.mallName!.trim(), shop.mallFloorAndUnit ?? ''].where((p) => p.isNotEmpty).join(' · ');
+  }
 
   @override
   Widget build(BuildContext context) {
+    final distance = distanceLabel.replaceFirst(RegExp(r' away$'), '');
+    final location = _locationLine;
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -51,50 +63,26 @@ class ShopMiniCard extends StatelessWidget {
                 children: [
                   ShopPhoto(shop: shop, width: double.infinity, height: double.infinity),
                   Positioned(top: 6, left: 6, child: OpenStatusBadge(hours: shop.hours)),
-                  // Mall cafés: a small badge so it's clear at a glance.
-                  if (shop.isInMall)
+                  if ((matchPercent ?? 0) > 0)
                     Positioned(
-                      left: 6,
+                      top: 6,
                       right: 6,
-                      bottom: 6,
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.92),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(Icons.local_mall_rounded, size: 11, color: AppColors.primaryBrown),
-                                  const SizedBox(width: 3),
-                                  Flexible(
-                                    child: Text(
-                                      'Inside ${shop.mallName!.trim()}',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.textDark),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              // Floor · unit · landmark, so cafés in the same
-                              // mall are easy to tell apart.
-                              if (shop.mallDetails != null)
-                                Text(
-                                  shop.mallDetails!,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(fontSize: 9, color: AppColors.textGrey),
-                                ),
-                            ],
-                          ),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryBrown,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.auto_awesome_rounded, size: 10, color: Colors.white),
+                            const SizedBox(width: 3),
+                            Text(
+                              '$matchPercent%',
+                              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -112,7 +100,7 @@ class ShopMiniCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 3),
                   Row(
                     children: [
                       const Icon(Icons.star_rounded, size: 14, color: Color(0xFFF5A623)),
@@ -121,10 +109,29 @@ class ShopMiniCard extends StatelessWidget {
                         shop.rating.toStringAsFixed(1),
                         style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.textDark),
                       ),
-                      const SizedBox(width: 6),
                       Expanded(
                         child: Text(
-                          distanceLabel,
+                          ' · $distance',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 11, color: AppColors.textGrey),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+                  Row(
+                    children: [
+                      Icon(
+                        shop.isInMall ? Icons.local_mall_outlined : Icons.location_on_outlined,
+                        size: 12,
+                        color: AppColors.primaryBrown,
+                      ),
+                      const SizedBox(width: 3),
+                      Expanded(
+                        child: Text(
+                          location,
+                          maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(fontSize: 11, color: AppColors.textGrey),
                         ),
