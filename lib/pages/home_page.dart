@@ -28,7 +28,7 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
+class _HomePageState extends State<HomePage> with TickerProviderStateMixin, WidgetsBindingObserver {
   final _searchController = TextEditingController();
   final _searchFocus = FocusNode();
   final _mapController = MapController();
@@ -76,6 +76,16 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       },
     );
     _loadCurrentLocation(showErrors: false);
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  /// Back in Kafelo (e.g. after turning on Location or allowing it in
+  /// Settings) without a location yet → try again automatically.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && !_hasRealLocation && !_isLocating) {
+      _loadCurrentLocation(showErrors: false);
+    }
   }
 
   Future<void> _loadCurrentLocation({bool showErrors = true}) async {
@@ -100,6 +110,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _searchController.dispose();
     _searchFocus.dispose();
     _pulseController.dispose();

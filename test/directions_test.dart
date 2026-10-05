@@ -1,6 +1,7 @@
 import 'dart:io' show SocketException;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'dart:ui' show SemanticsFlag;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -33,9 +34,15 @@ void main() {
         return http.Response(okBody, 200);
       });
       await RouteService.fetchRoute(from, to, client: client);
-      expect(asked!.host, 'router.project-osrm.org');
-      expect(asked!.path, '/route/v1/driving/125.54,8.947;125.544,8.95');
+      expect(asked!.host, 'routing.openstreetmap.de');
+      // Walking is the default, like Google Maps for nearby places.
+      expect(asked!.path, '/routed-foot/route/v1/driving/125.54,8.947;125.544,8.95');
       expect(asked!.queryParameters['geometries'], 'geojson');
+
+      await RouteService.fetchRoute(from, to, mode: TravelMode.bike, client: client);
+      expect(asked!.path, startsWith('/routed-bike/'));
+      await RouteService.fetchRoute(from, to, mode: TravelMode.car, client: client);
+      expect(asked!.path, startsWith('/routed-car/'));
     });
 
     test('no internet → the connection message', () async {
@@ -164,6 +171,51 @@ void main() {
       fakeLocation(serviceOn: true, permission: 1);
       await open(tester);
       expect(find.text('Open App Settings'), findsOneWidget);
+    });
+
+    testWidgets('Walk is selected first; Bike and Car can be chosen (Google Maps style)', (tester) async {
+      // A phone with location on, permission given and a recent GPS fix.
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(channel, (call) async {
+        switch (call.method) {
+          case 'isLocationServiceEnabled':
+            return true;
+          case 'checkPermission':
+          case 'requestPermission':
+            return 2;
+          case 'getLastKnownPosition':
+            return {
+              'latitude': 8.9480,
+              'longitude': 125.5340,
+              'timestamp': DateTime.now().millisecondsSinceEpoch,
+              'accuracy': 10.0,
+              'altitude': 0.0,
+              'altitude_accuracy': 0.0,
+              'heading': 0.0,
+              'heading_accuracy': 0.0,
+              'speed': 0.0,
+              'speed_accuracy': 0.0,
+              'is_mocked': false,
+            };
+        }
+        return null;
+      });
+      final semantics = tester.ensureSemantics();
+      await open(tester);
+      await tester.pump(const Duration(seconds: 1));
+
+      Finder mode(String label) => find.bySemanticsLabel(RegExp('^$label'));
+      bool isSelected(String label) => tester.getSemantics(mode(label)).hasFlag(SemanticsFlag.isSelected);
+      expect(mode('Walk'), findsOneWidget);
+      expect(mode('Bike'), findsOneWidget);
+      expect(mode('Car'), findsOneWidget);
+      expect(isSelected('Walk'), isTrue);
+      expect(isSelected('Car'), isFalse);
+
+      await tester.tap(mode('Car'));
+      await tester.pump(const Duration(seconds: 1));
+      expect(isSelected('Car'), isTrue);
+      expect(isSelected('Walk'), isFalse);
+      semantics.dispose();
     });
 
     testWidgets('Back returns to the café page', (tester) async {

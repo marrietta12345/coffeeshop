@@ -5,6 +5,19 @@ import 'dart:math' as math;
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 
+/// How the customer is travelling — like the mode buttons in Google Maps.
+enum TravelMode {
+  walk('foot', 'Walk', 'walk'),
+  bike('bike', 'Bike', 'by bike'),
+  car('car', 'Car', 'by car');
+
+  final String profile; // routing.openstreetmap.de profile
+  final String label;
+  final String phrase; // "Approximately 11 min walk" / "… by bike"
+
+  const TravelMode(this.profile, this.label, this.phrase);
+}
+
 /// A road route from OSRM: the path to draw, and the route's own distance
 /// and travel time.
 class RouteResult {
@@ -36,19 +49,20 @@ class RouteException implements Exception {
   String toString() => 'RouteException($kind)';
 }
 
-/// Road routes over OpenStreetMap data from OSRM (the public
-/// router.project-osrm.org service — free, no key; its public server
-/// offers the driving profile). Only the start and end points are sent,
-/// and nothing is stored.
+/// Walking, cycling and driving routes over OpenStreetMap data, from the
+/// OSRM servers run by FOSSGIS (routing.openstreetmap.de — free, no key,
+/// fair use). Only the start and end points are sent, and nothing is
+/// stored.
 class RouteService {
   RouteService._();
 
-  static const String _base = 'https://router.project-osrm.org/route/v1/driving';
+  static Uri routeUrl(LatLng from, LatLng to, TravelMode mode) => Uri.parse(
+        'https://routing.openstreetmap.de/routed-${mode.profile}/route/v1/driving/'
+        '${from.longitude},${from.latitude};${to.longitude},${to.latitude}?overview=full&geometries=geojson',
+      );
 
-  static Future<RouteResult> fetchRoute(LatLng from, LatLng to, {http.Client? client}) async {
-    final url = Uri.parse(
-      '$_base/${from.longitude},${from.latitude};${to.longitude},${to.latitude}?overview=full&geometries=geojson',
-    );
+  static Future<RouteResult> fetchRoute(LatLng from, LatLng to, {TravelMode mode = TravelMode.walk, http.Client? client}) async {
+    final url = routeUrl(from, to, mode);
     final httpClient = client ?? http.Client();
     try {
       final response = await httpClient
@@ -157,12 +171,15 @@ class RouteMath {
     return km < 10 ? '${km.toStringAsFixed(1)} km' : '${km.round()} km';
   }
 
-  /// "Approximately 7 min" / "Approximately 1 hr 5 min".
-  static String formatDuration(double seconds) {
+  /// "7 min" / "1 hr 5 min" — the time on a travel-mode button.
+  static String shortDuration(double seconds) {
     final minutes = math.max(1, (seconds / 60).round());
-    if (minutes < 60) return 'Approximately $minutes min';
+    if (minutes < 60) return '$minutes min';
     final hours = minutes ~/ 60;
     final rest = minutes % 60;
-    return 'Approximately $hours hr${rest == 0 ? '' : ' $rest min'}';
+    return '$hours hr${rest == 0 ? '' : ' $rest min'}';
   }
+
+  /// "Approximately 7 min" / "Approximately 1 hr 5 min".
+  static String formatDuration(double seconds) => 'Approximately ${shortDuration(seconds)}';
 }

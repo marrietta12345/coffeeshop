@@ -34,7 +34,7 @@ class ExplorePage extends StatefulWidget {
   State<ExplorePage> createState() => _ExplorePageState();
 }
 
-class _ExplorePageState extends State<ExplorePage> {
+class _ExplorePageState extends State<ExplorePage> with WidgetsBindingObserver {
   final _searchController = TextEditingController();
   final _searchFocus = FocusNode();
 
@@ -79,16 +79,33 @@ class _ExplorePageState extends State<ExplorePage> {
       onError: (Object error) => debugPrint('Explore preferences stream error: $error'),
     );
     _loadCurrentLocation();
+    WidgetsBinding.instance.addObserver(this);
   }
 
+  bool _hasLocation = false;
+  bool _locating = false;
+
   Future<void> _loadCurrentLocation() async {
+    if (_locating) return;
+    _locating = true;
     final result = await getCurrentLocation();
+    _locating = false;
     if (!mounted || !result.isSuccess) return;
-    setState(() => _userLocation = result.position!);
+    setState(() {
+      _userLocation = result.position!;
+      _hasLocation = true;
+    });
+  }
+
+  /// Back in Kafelo after turning on Location → try again automatically.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && !_hasLocation) _loadCurrentLocation();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _searchController.dispose();
     _searchFocus.dispose();
     _shopsSubscription?.cancel();

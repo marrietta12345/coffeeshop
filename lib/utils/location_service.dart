@@ -38,17 +38,18 @@ Future<LocationAccess> ensureLocationAccess() async {
   return LocationAccess.ready;
 }
 
-/// GPS settings used across the app. On Android, the default fused
-/// location provider can hang indefinitely on emulators/AVDs that don't
-/// have full Google Play Services support — forceLocationManager routes
-/// requests through Android's plain LocationManager instead, which
-/// reliably works with the emulator's Extended Controls > Location
-/// "Send" feature. [distanceFilter] (meters) skips updates for tiny moves.
-LocationSettings deviceLocationSettings({Duration? timeLimit, int distanceFilter = 0}) {
+/// GPS settings used across the app. [useLocationManager] (Android)
+/// routes requests through Android's plain LocationManager instead of
+/// Google's fused location service: the fused service is fast and works
+/// indoors on real phones, but can hang on emulators without full Google
+/// Play Services, where LocationManager works with the emulator's
+/// Extended Controls > Location "Send". [distanceFilter] (meters) skips
+/// updates for tiny moves.
+LocationSettings deviceLocationSettings({Duration? timeLimit, int distanceFilter = 0, bool useLocationManager = true}) {
   return (!kIsWeb && Platform.isAndroid)
       ? AndroidSettings(
           accuracy: LocationAccuracy.high,
-          forceLocationManager: true,
+          forceLocationManager: useLocationManager,
           distanceFilter: distanceFilter,
           timeLimit: timeLimit,
         )
@@ -63,13 +64,24 @@ LocationSettings deviceLocationSettings({Duration? timeLimit, int distanceFilter
 /// meters of movement, not on every tiny GPS jitter. Cancel the
 /// subscription to stop tracking.
 Stream<LatLng> watchLocation({int distanceFilter = 10}) {
-  return Geolocator.getPositionStream(locationSettings: deviceLocationSettings(distanceFilter: distanceFilter))
+  return Geolocator.getPositionStream(
+    locationSettings: deviceLocationSettings(distanceFilter: distanceFilter, useLocationManager: false),
+  )
       .map((position) => LatLng(position.latitude, position.longitude));
 }
+
+/// A position the phone already knows that's recent enough to use right
+/// away (it's refreshed by a live fix afterwards where that matters).
+const Duration _recentEnough = Duration(minutes: 5);
 
 /// Requests location permission (if needed) and returns the device's
 /// current GPS position. Shared by every screen that needs the user's
 /// real location instead of a hardcoded fallback coordinate.
+///
+/// Fast on real phones: uses the phone's recent last-known position if it
+/// has one, otherwise Google's fused location service (Wi-Fi / cell / GPS
+/// — works indoors), and only then falls back to GPS-only LocationManager
+/// (needed on some emulators).
 Future<LocationResult> getCurrentLocation() async {
   try {
     switch (await ensureLocationAccess()) {
@@ -87,15 +99,38 @@ Future<LocationResult> getCurrentLocation() async {
         break;
     }
 
-    final position = await Geolocator.getCurrentPosition(
-      locationSettings: deviceLocationSettings(timeLimit: const Duration(seconds: 10)),
-    ).timeout(const Duration(seconds: 12));
+    // 1. The phone's own recent position — instant.
+    Position? lastKnown;
+    try {
+      lastKnown = await Geolocator.getLastKnownPosition().timeout(const Duration(seconds: 3));
+    } catch (_) {
+      lastKnown = null;
+    }
+    if (lastKnown != null && DateTime.now().difference(lastKnown.timestamp).abs() < _recentEnough) {
+      return LocationResult.success(LatLng(lastKnown.latitude, lastKnown.longitude));
+    }
 
-    return LocationResult.success(LatLng(position.latitude, position.longitude));
+    // 2. A fresh fix: the fast fused service first, then GPS-only.
+    for (final useLocationManager in (!kIsWeb && Platform.isAndroid) ? const [false, true] : const [false]) {
+      try {
+        final position = await Geolocator.getCurrentPosition(
+          locationSettings: deviceLocationSettings(timeLimit: const Duration(seconds: 10), useLocationManager: useLocationManager),
+        ).timeout(const Duration(seconds: 12));
+        return LocationResult.success(LatLng(position.latitude, position.longitude));
+      } catch (_) {
+        // try the next way
+      }
+    }
+
+    // 3. Nothing fresh — an older known position is still the real one.
+    if (lastKnown != null) {
+      return LocationResult.success(LatLng(lastKnown.latitude, lastKnown.longitude));
+    }
+    throw TimeoutException('No location fix');
   } on TimeoutException {
     return const LocationResult.failure(
-      "Couldn't get your location in time. On an emulator, open Extended "
-      "Controls (⋮) → Location, set a point, and tap Send.",
+      "Couldn't get your location yet. Try again near a window or outdoors. "
+      "On an emulator, open Extended Controls (⋮) → Location and tap Send.",
     );
   } catch (e) {
     return const LocationResult.failure("Couldn't get your current location.");

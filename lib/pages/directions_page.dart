@@ -37,7 +37,13 @@ class _DirectionsPageState extends State<DirectionsPage> {
   StreamSubscription<LatLng>? _locationSub;
 
   LatLng? _me; // latest real GPS fix
-  RouteResult? _route;
+  // Like Google Maps: Walk by default; Bike and Car one tap away. Routes
+  // for every mode from the latest starting point (so each button shows
+  // its own travel time); the selected one is drawn.
+  TravelMode _mode = TravelMode.walk;
+  final Map<TravelMode, RouteResult> _routes = {};
+  int _routeGeneration = 0; // a newer starting point makes older results stale
+  RouteResult? get _route => _routes[_mode];
   _Status _status = _Status.locating;
   _Problem? _problem;
   String? _routeError; // message for a failed route request
@@ -145,21 +151,28 @@ class _DirectionsPageState extends State<DirectionsPage> {
 
   Future<void> _fetchRoute(LatLng from) async {
     final hadRoute = _route != null;
+    final mode = _mode;
+    final generation = ++_routeGeneration;
     _requesting = true;
     _lastRouteRequest = DateTime.now();
     setState(() {
       _status = hadRoute ? _Status.recalculating : _Status.routing;
       _routeError = null;
+      if (_problem == _Problem.route) _problem = null;
     });
     try {
-      final route = await RouteService.fetchRoute(from, _cafe);
+      final route = await RouteService.fetchRoute(from, _cafe, mode: mode);
       if (!mounted) return;
       setState(() {
-        _route = route; // replaces the old line — never two at once
+        // A new starting point replaces every mode's route — never two lines.
+        _routes
+          ..clear()
+          ..[mode] = route;
         _updatesPaused = false;
         _status = _status == _Status.arrived ? _Status.arrived : _Status.ready;
       });
       if (!hadRoute) _fitAll();
+      _fetchOtherModes(from, generation);
     } on RouteException catch (e) {
       if (!mounted) return;
       setState(() {
@@ -175,6 +188,29 @@ class _DirectionsPageState extends State<DirectionsPage> {
       });
     } finally {
       _requesting = false;
+      // The user switched mode while this was loading → get that one now.
+      if (mounted && mode != _mode && _route == null && _me != null) _fetchRoute(_me!);
+    }
+  }
+
+  /// The other modes' routes, quietly, for the times on their buttons.
+  void _fetchOtherModes(LatLng from, int generation) {
+    for (final other in TravelMode.values) {
+      if (other == _mode) continue;
+      RouteService.fetchRoute(from, _cafe, mode: other).then((route) {
+        if (mounted && generation == _routeGeneration) setState(() => _routes[other] = route);
+      }, onError: (Object e) => debugPrint('${other.label} route unavailable: $e'));
+    }
+  }
+
+  /// Walk / Bike / Car.
+  void _selectMode(TravelMode mode) {
+    if (mode == _mode) return;
+    setState(() => _mode = mode);
+    if (_route != null) {
+      _fitAll(); // already have it — show it
+    } else if (_me != null && !_requesting) {
+      _fetchRoute(_me!);
     }
   }
 
@@ -259,13 +295,21 @@ class _DirectionsPageState extends State<DirectionsPage> {
               if (route != null)
                 PolylineLayer(
                   polylines: [
-                    Polyline(
-                      points: route.points,
-                      strokeWidth: 6,
-                      color: AppColors.primaryBrown,
-                      borderStrokeWidth: 2,
-                      borderColor: Colors.white,
-                    ),
+                    // Walking: a dotted line, like Google Maps; Bike / Car: solid.
+                    _mode == TravelMode.walk
+                        ? Polyline(
+                            points: route.points,
+                            strokeWidth: 7,
+                            color: AppColors.primaryBrown,
+                            pattern: const StrokePattern.dotted(spacingFactor: 1.6),
+                          )
+                        : Polyline(
+                            points: route.points,
+                            strokeWidth: 6,
+                            color: AppColors.primaryBrown,
+                            borderStrokeWidth: 2,
+                            borderColor: Colors.white,
+                          ),
                   ],
                 ),
               MarkerLayer(
@@ -303,6 +347,9 @@ class _DirectionsPageState extends State<DirectionsPage> {
             child: _InfoPanel(
               shop: widget.shop,
               route: route,
+              mode: _mode,
+              routes: _routes,
+              onModeSelected: _selectMode,
               arrived: _status == _Status.arrived,
               updatesPaused: _updatesPaused,
               problem: _status == _Status.problem ? _problem : null,
@@ -359,6 +406,9 @@ class _StatusChip extends StatelessWidget {
 class _InfoPanel extends StatelessWidget {
   final CoffeeShop shop;
   final RouteResult? route;
+  final TravelMode mode;
+  final Map<TravelMode, RouteResult> routes;
+  final ValueChanged<TravelMode> onModeSelected;
   final bool arrived;
   final bool updatesPaused;
   final _Problem? problem;
@@ -370,6 +420,9 @@ class _InfoPanel extends StatelessWidget {
   const _InfoPanel({
     required this.shop,
     required this.route,
+    required this.mode,
+    required this.routes,
+    required this.onModeSelected,
     required this.arrived,
     required this.updatesPaused,
     required this.problem,
@@ -400,6 +453,24 @@ class _InfoPanel extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (problem == null || problem == _Problem.route) ...[
+                  Row(
+                    children: [
+                      for (final m in TravelMode.values) ...[
+                        if (m != TravelMode.values.first) const SizedBox(width: 8),
+                        Expanded(
+                          child: _ModeButton(
+                            mode: m,
+                            selected: m == mode,
+                            minutes: routes[m]?.durationSeconds == null ? null : RouteMath.shortDuration(routes[m]!.durationSeconds!),
+                            onTap: () => onModeSelected(m),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                ],
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -438,7 +509,7 @@ class _InfoPanel extends StatelessWidget {
                       children: [
                         _Fact(icon: Icons.route_rounded, text: RouteMath.formatDistance(route.distanceMeters)),
                         if (route.durationSeconds != null)
-                          _Fact(icon: Icons.schedule_rounded, text: '${RouteMath.formatDuration(route.durationSeconds!)} by car'),
+                          _Fact(icon: Icons.schedule_rounded, text: '${RouteMath.formatDuration(route.durationSeconds!)} ${mode.phrase}'),
                       ],
                     ),
                   if (updatesPaused) ...[
@@ -485,8 +556,62 @@ class _InfoPanel extends StatelessWidget {
                 ],
                 const SizedBox(height: 10),
                 const Text(
-                  'Map data © OpenStreetMap contributors · Routes by OSRM',
+                  'Map data © OpenStreetMap contributors · Routes by OSRM (FOSSGIS)',
                   style: TextStyle(fontSize: 10, color: AppColors.textGrey),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A Walk / Bike / Car button with that mode's travel time.
+class _ModeButton extends StatelessWidget {
+  final TravelMode mode;
+  final bool selected;
+  final String? minutes; // null until that route is known
+  final VoidCallback onTap;
+
+  const _ModeButton({required this.mode, required this.selected, required this.minutes, required this.onTap});
+
+  static const _icons = {
+    TravelMode.walk: Icons.directions_walk_rounded,
+    TravelMode.bike: Icons.directions_bike_rounded,
+    TravelMode.car: Icons.directions_car_rounded,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final color = selected ? Colors.white : AppColors.textDark;
+    return Semantics(
+      button: true,
+      selected: selected,
+      // One clear label for screen readers, e.g. "Walk, 11 min".
+      label: minutes == null ? mode.label : '${mode.label}, $minutes',
+      excludeSemantics: true,
+      child: Material(
+        color: selected ? AppColors.primaryBrown : AppColors.inputFill,
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 9),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(_icons[mode], size: 18, color: selected ? Colors.white : AppColors.primaryBrown),
+                const SizedBox(width: 5),
+                Flexible(
+                  child: Text(
+                    minutes ?? mode.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: color),
+                  ),
                 ),
               ],
             ),
