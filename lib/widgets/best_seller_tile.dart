@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../models/coffee_shop.dart';
 import '../models/menu_item.dart';
+import 'coffee_badges.dart';
 import 'menu_item_image.dart';
 
-/// A single "best seller" row — photo, item name, shop name, a heart+like
-/// badge, and price. Shared between the Explore page's preview list and
+/// A single "best seller" row — photo, item name (+ a Best Seller label
+/// when the café marked it), shop name, a heart+like badge, and price. Shared between the Explore page's preview list and
 /// the full Best Sellers page.
 class BestSellerTile extends StatelessWidget {
   final MenuItem item;
@@ -42,7 +43,18 @@ class BestSellerTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(item.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: AppColors.textDark)),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(item.name, maxLines: 1, overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: AppColors.textDark)),
+                      ),
+                      if (item.bestSeller) ...[
+                        const SizedBox(width: 6),
+                        const CoffeeBadge(CoffeeBadgeKind.bestSeller, solid: false),
+                      ],
+                    ],
+                  ),
                   const SizedBox(height: 2),
                   Text(item.description, maxLines: 1, overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontSize: 11.5, color: AppColors.textGrey)),

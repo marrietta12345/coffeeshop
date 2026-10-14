@@ -2,8 +2,12 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../models/coffee_shop.dart';
 import '../models/menu_item.dart';
 import 'supabase_image_service.dart';
+
+/// A coffee together with the café that serves it.
+typedef CafeCoffee = ({MenuItem item, CoffeeShop shop});
 
 /// Popular Coffee time ranges — only ones the stored like dates support.
 enum PopularityPeriod {
@@ -212,6 +216,41 @@ class MenuService {
     return entries.where((e) => e.likes > 0).toList()
       ..sort((a, b) {
         final byLikes = b.likes.compareTo(a.likes);
+        return byLikes != 0 ? byLikes : a.item.name.toLowerCase().compareTo(b.item.name.toLowerCase());
+      });
+  }
+
+  // ---------------------------- Best Sellers ----------------------------
+
+  /// Every coffee on [shops]' menus, each with its café. Menus live in
+  /// each café's own `menu` subcollection, so they're read per café (the
+  /// existing public menu rules allow it — no extra rules or indexes).
+  /// A café whose menu can't be read is skipped rather than failing all.
+  static Future<List<CafeCoffee>> cafeMenus(List<CoffeeShop> shops) async {
+    final menus = await Future.wait([
+      for (final shop in shops)
+        _menu(shop.id).get().then(
+          (snap) => snap.docs.map(MenuItem.fromFirestore).toList(),
+          onError: (Object e) {
+            debugPrint('Best Sellers: could not load the menu of ${shop.id}: $e');
+            return <MenuItem>[];
+          },
+        ),
+    ]);
+    return [
+      for (var i = 0; i < shops.length; i++)
+        for (final item in menus[i]) (item: item, shop: shops[i]),
+    ];
+  }
+
+  /// Explore's Best Sellers: coffees the café marked as Best Seller first,
+  /// then the most-hearted ones. A coffee with neither (or one that's
+  /// currently unavailable) is left out. Ties: more hearts, then name.
+  static List<CafeCoffee> rankBestSellers(List<CafeCoffee> coffees) {
+    return coffees.where((c) => c.item.available && (c.item.bestSeller || c.item.likes > 0)).toList()
+      ..sort((a, b) {
+        if (a.item.bestSeller != b.item.bestSeller) return a.item.bestSeller ? -1 : 1;
+        final byLikes = b.item.likes.compareTo(a.item.likes);
         return byLikes != 0 ? byLikes : a.item.name.toLowerCase().compareTo(b.item.name.toLowerCase());
       });
   }

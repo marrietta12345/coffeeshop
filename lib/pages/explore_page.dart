@@ -5,17 +5,18 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../theme/app_colors.dart';
 import '../models/coffee_preferences.dart';
 import '../models/coffee_shop.dart';
-import '../models/menu_item.dart';
+import '../widgets/best_seller_tile.dart';
 import '../widgets/coffee_search_bar.dart';
-import '../widgets/menu_item_image.dart';
 import '../widgets/shop_photo.dart';
 import '../widgets/shop_mini_card.dart';
 import '../utils/distance_utils.dart';
 import '../utils/location_service.dart';
+import '../utils/menu_service.dart';
 import '../utils/page_transitions.dart';
 import '../utils/cafe_search.dart';
 import '../utils/recommendations.dart';
 import '../utils/user_profile_service.dart';
+import 'all_best_sellers_page.dart';
 import 'coffee_preferences_page.dart';
 import 'shop_detail_page.dart';
 import 'shop_list_page.dart';
@@ -24,8 +25,8 @@ import 'shop_list_page.dart';
 /// names, locations/malls, coffee types, atmosphere, features), then
 /// "Recommended for You" (cafés ranked
 /// by how well they match the user's Coffee Preferences), a horizontal
-/// "Popular Coffee Shops" carousel, and a "Best Sellers" carousel pulling
-/// the most-liked menu items across every shop. Complements the map tab (location-first) with
+/// "Popular Coffee Shops" carousel, and "Best Sellers" — café-marked Best
+/// Sellers first, then the most-hearted coffees across every café. Complements the map tab (location-first) with
 /// a listing-first way to discover shops.
 class ExplorePage extends StatefulWidget {
   const ExplorePage({super.key});
@@ -68,6 +69,7 @@ class _ExplorePageState extends State<ExplorePage> with WidgetsBindingObserver {
       (snapshot) {
         if (!mounted) return;
         setState(() => _shops = snapshot.docs.map(CoffeeShop.fromFirestore).toList());
+        _loadBestSellersIfCafesChanged();
       },
       onError: (Object error) => debugPrint('Explore shops stream error: $error'),
     );
@@ -136,15 +138,45 @@ class _ExplorePageState extends State<ExplorePage> with WidgetsBindingObserver {
     );
   }
 
-  List<({MenuItem item, CoffeeShop shop})> get _bestSellers {
-    final all = <({MenuItem item, CoffeeShop shop})>[];
-    for (final shop in _shops) {
-      for (final item in shop.menu) {
-        all.add((item: item, shop: shop));
-      }
+  // Best Sellers from the cafés' real menus (each café's `menu`
+  // subcollection), ranked by MenuService.rankBestSellers.
+  static const _bestSellersPreview = 6;
+  List<CafeCoffee> _bestSellers = [];
+  bool _bestSellersLoaded = false;
+  String _bestSellersCafeKey = '';
+  int _bestSellersLoad = 0; // only the newest load may update the list
+
+  /// Reloads Best Sellers when cafés are added or removed (not on every
+  /// rating/favorite change to a café document).
+  void _loadBestSellersIfCafesChanged() {
+    final key = (_shops.map((s) => s.id).toList()..sort()).join(',');
+    if (key == _bestSellersCafeKey) return;
+    _bestSellersCafeKey = key;
+    _loadBestSellers();
+  }
+
+  Future<void> _loadBestSellers() async {
+    final load = ++_bestSellersLoad;
+    final ranked = MenuService.rankBestSellers(await MenuService.cafeMenus(_shops));
+    if (!mounted || load != _bestSellersLoad) return;
+    setState(() {
+      _bestSellers = ranked;
+      _bestSellersLoaded = true;
+    });
+  }
+
+  Future<void> _openCoffee(CafeCoffee coffee) async {
+    try {
+      await openCafeCoffee(context, coffee.shop, coffee.item);
+    } catch (e) {
+      debugPrint('Explore: could not open coffee: $e');
     }
-    all.sort((a, b) => b.item.likes.compareTo(a.item.likes));
-    return all.take(6).toList();
+    _loadBestSellers(); // hearts may have changed
+  }
+
+  Future<void> _openAllBestSellers() async {
+    await Navigator.of(context).push(slideFadeRoute(AllBestSellersPage(shops: _shops)));
+    _loadBestSellers();
   }
 
   void _onSearchChanged(String value) {
@@ -388,64 +420,38 @@ class _ExplorePageState extends State<ExplorePage> with WidgetsBindingObserver {
                   'Best Sellers',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.textDark),
                 ),
-                Text('View all', style: TextStyle(fontSize: 12, color: AppColors.primaryBrown, fontWeight: FontWeight.w700)),
+                GestureDetector(
+                  onTap: _openAllBestSellers,
+                  behavior: HitTestBehavior.opaque,
+                  child: Padding(
+                    // Bigger tap target without changing how it looks.
+                    padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                    child: Text('View all', style: TextStyle(fontSize: 12, color: AppColors.primaryBrown, fontWeight: FontWeight.w700)),
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 12),
-            if (_bestSellers.isEmpty) const _EmptyNote('No best sellers yet.'),
-            ..._bestSellers.map((entry) => _BestSellerRow(
-                  item: entry.item,
-                  shop: entry.shop,
-                  onTap: () => _openShop(entry.shop),
-                )),
+            if (!_bestSellersLoaded)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 24),
+                child: Center(
+                  child: SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.primaryBrown),
+                  ),
+                ),
+              )
+            else if (_bestSellers.isEmpty)
+              const _EmptyNote('No best sellers yet.')
+            else
+              ..._bestSellers.take(_bestSellersPreview).map((coffee) => BestSellerTile(
+                    item: coffee.item,
+                    shop: coffee.shop,
+                    onTap: () => _openCoffee(coffee),
+                  )),
             ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _BestSellerRow extends StatelessWidget {
-  final MenuItem item;
-  final CoffeeShop shop;
-  final VoidCallback onTap;
-
-  const _BestSellerRow({required this.item, required this.shop, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 3))],
-        ),
-        child: Row(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: MenuItemImage(item: item, shop: shop, fallbackIndex: 0, width: 48, height: 48),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(item.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5, color: AppColors.textDark)),
-                  const SizedBox(height: 2),
-                  Text(shop.name, style: const TextStyle(fontSize: 11.5, color: AppColors.textGrey)),
-                ],
-              ),
-            ),
-            Text(
-              MenuItem.formatPrice(item.price),
-              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5, color: AppColors.primaryBrown),
-            ),
           ],
         ),
       ),
