@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../models/menu_item.dart';
 import 'fitted_image.dart';
+import 'menu_item_image.dart';
 
 /// Background shared by the owner tabs (same as the Dashboard).
 const Color ownerPageBackground = Color(0xFFFAF8F5);
@@ -147,25 +148,20 @@ class OwnerSegmentedFilter<T> extends StatelessWidget {
 }
 
 /// A coffee's photo in a fixed 4:3 box ([size] wide) — the real uploaded
-/// image filling the box, or a plain coffee-cup tile when it has none (never a
-/// stock photo). Greyed out when unavailable.
+/// whole photo in a square box, or the "no drink image" tile when it has
+/// none (never a stock photo). Greyed out when unavailable.
 class CoffeeThumb extends StatelessWidget {
   final MenuItem item;
-  final double size; // width; height follows the 4:3 ratio
+  final double size; // square side
 
   const CoffeeThumb({super.key, required this.item, this.size = 80});
 
   @override
   Widget build(BuildContext context) {
     final height = size / ImageRatios.coffee;
-    final placeholder = Container(
-      width: size,
-      height: height,
-      color: AppColors.primaryBrown.withOpacity(0.12),
-      child: Icon(Icons.local_cafe_rounded, color: AppColors.primaryBrown, size: height * 0.45),
-    );
+    final placeholder = NoDrinkImage(width: size, height: height);
     Widget image = item.hasImage
-        ? FittedImage.network(item.imageUrl!, width: size, height: height, fit: BoxFit.cover, fallback: placeholder)
+        ? FittedImage.network(item.imageUrl!, width: size, height: height, fallback: placeholder)
         : placeholder;
     if (!item.available) {
       image = ColorFiltered(

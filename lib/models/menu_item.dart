@@ -104,6 +104,14 @@ class MenuItem {
   }
 
   /// "₱120" or "₱120.50".
-  static String formatPrice(double price) =>
-      price == price.roundToDouble() ? '₱${price.toStringAsFixed(0)}' : '₱${price.toStringAsFixed(2)}';
+  /// Shown instead of a price for a coffee whose price isn't known yet.
+  static const String noPriceLabel = 'No price yet';
+
+  bool get hasPrice => price > 0;
+
+  /// "₱150", "₱145.50", or [noPriceLabel] when there's no price.
+  static String formatPrice(double price) {
+    if (price <= 0) return noPriceLabel;
+    return price == price.roundToDouble() ? '₱${price.toStringAsFixed(0)}' : '₱${price.toStringAsFixed(2)}';
+  }
 }

@@ -429,7 +429,7 @@ class _BestSellerRow extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(10),
-              child: MenuItemImage(item: item, shop: shop, fallbackIndex: 0, width: 56, height: 42),
+              child: MenuItemImage(item: item, shop: shop, fallbackIndex: 0, width: 48, height: 48),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -443,7 +443,7 @@ class _BestSellerRow extends StatelessWidget {
               ),
             ),
             Text(
-              '₱${item.price.toStringAsFixed(0)}',
+              MenuItem.formatPrice(item.price),
               style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5, color: AppColors.primaryBrown),
             ),
           ],
@@ -594,7 +594,7 @@ class _SearchSuggestionsCard extends StatelessWidget {
             ClipRRect(
               borderRadius: BorderRadius.circular(10),
               child: shop != null
-                  ? ShopPhoto(shop: shop, width: 52, height: 39)
+                  ? ShopLogoImage(shop: shop, width: 52, height: 39)
                   : Container(
                       width: 52,
                       height: 39,

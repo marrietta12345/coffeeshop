@@ -111,11 +111,11 @@ class _OwnerCoffeeFormPageState extends State<OwnerCoffeeFormPage> {
 
   Future<void> _pickImage() async {
     try {
-      // Good quality, sensible file size; the preview shows the exact menu framing.
+      // Good quality, sensible file size; the whole photo is always shown.
       final picked = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 85, maxWidth: 1600);
       if (picked == null || !mounted) return;
       final file = File(picked.path);
-      final use = await confirmPhoto(context, image: FileImage(file), aspectRatio: ImageRatios.coffee, title: 'Use this coffee photo?', fit: BoxFit.cover);
+      final use = await confirmPhoto(context, image: FileImage(file), aspectRatio: ImageRatios.coffee, title: 'Use this coffee photo?');
       if (!use || !mounted) return;
       setState(() {
         _newImage = file;
@@ -377,11 +377,11 @@ class _PhotoPicker extends StatelessWidget {
   Widget build(BuildContext context) {
     final hasPhoto = newImage != null || (currentUrl?.isNotEmpty ?? false);
     Widget preview;
-    // Shown exactly as on the menu: the photo fills a 4:3 box.
+    // Shown exactly as on the menu: the whole drink in a square box.
     if (newImage != null) {
-      preview = FittedImage(image: FileImage(newImage!), width: double.infinity, height: double.infinity, fit: BoxFit.cover);
+      preview = FittedImage(image: FileImage(newImage!), width: double.infinity, height: double.infinity);
     } else if (currentUrl?.isNotEmpty ?? false) {
-      preview = FittedImage.network(currentUrl!, width: double.infinity, height: double.infinity, fit: BoxFit.cover);
+      preview = FittedImage.network(currentUrl!, width: double.infinity, height: double.infinity);
     } else {
       preview = const Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -390,7 +390,7 @@ class _PhotoPicker extends StatelessWidget {
           SizedBox(height: 8),
           Text('Add a coffee photo', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark)),
           SizedBox(height: 2),
-          Text('Optional · square or landscape photos look best', textAlign: TextAlign.center, style: TextStyle(fontSize: 11.5, color: AppColors.textGrey)),
+          Text('Optional', style: TextStyle(fontSize: 11.5, color: AppColors.textGrey)),
         ],
       );
     }
@@ -399,11 +399,17 @@ class _PhotoPicker extends StatelessWidget {
       children: [
         GestureDetector(
           onTap: onPick,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: AspectRatio(
-              aspectRatio: ImageRatios.coffee,
-              child: Container(color: AppColors.inputFill, child: preview),
+          // Square like the menu; capped so the form stays short.
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 240),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: AspectRatio(
+                  aspectRatio: ImageRatios.coffee,
+                  child: Container(color: AppColors.inputFill, child: preview),
+                ),
+              ),
             ),
           ),
         ),

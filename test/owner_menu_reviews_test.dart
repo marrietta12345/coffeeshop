@@ -43,6 +43,9 @@ void main() {
     test('prices display in pesos', () {
       expect(MenuItem.formatPrice(120), '₱120');
       expect(MenuItem.formatPrice(120.5), '₱120.50');
+      // A coffee whose price isn't known yet (e.g. from a café's poster).
+      expect(MenuItem.formatPrice(0), 'No price yet');
+      expect(const MenuItem(name: 'Hot Coffee', description: '', price: 0).hasPrice, isFalse);
     });
   });
 

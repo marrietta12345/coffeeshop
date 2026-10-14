@@ -145,6 +145,10 @@ class CoffeeShop {
   static List<String> _stringList(Object? value) =>
       (value as List?)?.map((e) => e.toString()).toList() ?? const [];
 
+  /// False for a café whose map spot isn't set yet (stored as 0, 0) —
+  /// it gets no map pin, distance or directions.
+  bool get hasLocation => latitude != 0 || longitude != 0;
+
   bool get isInMall => locationType != 'standalone' && (mallName?.trim().isNotEmpty ?? false);
 
   /// The location line shown across the app. Cafés inside a mall read

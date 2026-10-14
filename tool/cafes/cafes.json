@@ -1,0 +1,996 @@
+{
+  "_readme": "Kafelo cafés without an owner account. Edit this file, then run the import (see tool/cafes/README.md). Fill in only real details you've confirmed or have permission to use.",
+  "_source": "Names, Facebook pages and 10 location notes from Da Reviewer's International Coffee Day list (Oct 1, 2026): https://www.facebook.com/DaReviewerOfficial/posts/pfbid02EUGHUVPkrfmWeUEZSJjKvzQkheUTeQprBrqWhxE9tqBYy7u1x9Th6CUgDfq2tE2tl",
+  "cafes": [
+    {
+      "id": "3d-cafe",
+      "name": "3D Café",
+      "description": "3D Cafe by 3D Food Court. Outdoor café • Drinks & good vibes.",
+      "address": "3D Food Court, Imadejas Pob. (Bgy. 24), Butuan City",
+      "latitude": 8.9450868,
+      "longitude": 125.530963,
+      "mall": null,
+      "phoneNumber": null,
+      "facebookUrl": "https://www.facebook.com/people/3D-Caf%C3%A9/61593911396952/",
+      "website": null,
+      "instagramUrl": null,
+      "tiktokUrl": null,
+      "hours": {
+        "mon": {
+          "open": "16:00",
+          "close": "00:00"
+        },
+        "tue": {
+          "open": "16:00",
+          "close": "00:00"
+        },
+        "wed": {
+          "open": "16:00",
+          "close": "00:00"
+        },
+        "thu": {
+          "open": "16:00",
+          "close": "00:00"
+        },
+        "fri": {
+          "open": "16:00",
+          "close": "00:00"
+        },
+        "sat": {
+          "open": "16:00",
+          "close": "00:00"
+        },
+        "sun": {
+          "open": "16:00",
+          "close": "00:00"
+        }
+      },
+      "coffeeTypes": [],
+      "atmospheres": [],
+      "amenities": [
+        "outdoorSeating"
+      ],
+      "logo": "images/3d-cafe/logo.jpg",
+      "banner": "images/3d-cafe/banner.jpg",
+      "photos": [
+        "images/3d-cafe/photo-1.jpg",
+        "images/3d-cafe/photo-2.jpg",
+        "images/3d-cafe/photo-3.jpg"
+      ],
+      "menu": [
+        {
+          "name": "Mocha",
+          "description": "Espresso + Chocolate + Milk · Large ₱150",
+          "price": 135,
+          "category": "Mocha",
+          "available": true,
+          "bestSeller": false,
+          "featured": false,
+          "image": "images/3d-cafe/mocha.jpg"
+        },
+        {
+          "name": "Salted Caramel",
+          "description": "Espresso + Caramel + Salted Caramel Sauce + Milk · Large ₱160",
+          "price": 145,
+          "category": "Other Coffee",
+          "available": true,
+          "bestSeller": false,
+          "featured": false,
+          "image": "images/3d-cafe/salted-caramel.jpg"
+        },
+        {
+          "name": "Sea Salt Matcha",
+          "description": "Matcha + Milk + Homemade Sea Salt Cream Cheese · Large ₱170",
+          "price": 155,
+          "category": "Other Coffee",
+          "available": true,
+          "bestSeller": false,
+          "featured": false,
+          "image": "images/3d-cafe/sea-salt-matcha.jpg"
+        }
+      ],
+      "_menuWaitingForPhotos": [
+        {
+          "name": "Americano",
+          "description": "Espresso + Water · Large ₱120",
+          "price": 110,
+          "category": "Americano",
+          "available": true,
+          "bestSeller": false,
+          "featured": false,
+          "image": null
+        },
+        {
+          "name": "Cafe Latte",
+          "description": "Espresso + Milk · Large ₱135",
+          "price": 120,
+          "category": "Latte",
+          "available": true,
+          "bestSeller": false,
+          "featured": false,
+          "image": null
+        },
+        {
+          "name": "Spanish Latte",
+          "description": "Espresso + Milk + Condensed Milk · Large ₱150",
+          "price": 135,
+          "category": "Spanish Latte",
+          "available": true,
+          "bestSeller": false,
+          "featured": false,
+          "image": null
+        },
+        {
+          "name": "White Mocha",
+          "description": "Espresso + White Chocolate + Milk · Large ₱150",
+          "price": 135,
+          "category": "Mocha",
+          "available": true,
+          "bestSeller": false,
+          "featured": false,
+          "image": null
+        },
+        {
+          "name": "Caramel Macchiato",
+          "description": "Espresso + Vanilla + Caramel + Milk · Large ₱160",
+          "price": 145,
+          "category": "Macchiato",
+          "available": true,
+          "bestSeller": false,
+          "featured": false,
+          "image": null
+        },
+        {
+          "name": "French Vanilla",
+          "description": "Espresso + Vanilla + Hazelnut + Milk · Large ₱160",
+          "price": 145,
+          "category": "Latte",
+          "available": true,
+          "bestSeller": false,
+          "featured": false,
+          "image": null
+        },
+        {
+          "name": "Sea Salt Special",
+          "description": "Rich espresso blended with creamy milk and vanilla, topped with our homemade sea salt cheese cream for a smooth sweet & salty finish.",
+          "price": 205,
+          "category": "Other Coffee",
+          "available": true,
+          "bestSeller": false,
+          "featured": false,
+          "image": null
+        },
+        {
+          "name": "Biscoff Special",
+          "description": "Rich espresso blended with creamy milk, vanilla, and Biscoff, topped with our homemade sea salt cream cheese for a sweet, creamy, and slightly salty finish.",
+          "price": 205,
+          "category": "Other Coffee",
+          "available": true,
+          "bestSeller": false,
+          "featured": false,
+          "image": null
+        }
+      ]
+    },
+    {
+      "id": "boss-nan-z-coffee",
+      "name": "Boss Nan'z Coffee",
+      "description": "Brewed with love, served with a smile. ☕ Boss Nan’z Coffee — your daily dose of comfort, caffeine, and good vibes. SIMPLE BUT ELEGANT!",
+      "address": "Purok 6, Butuan Airport, Brgy. Bancasi, Butuan City",
+      "latitude": 8.9472485,
+      "longitude": 125.4813327,
+      "mall": null,
+      "phoneNumber": "+639399043483",
+      "facebookUrl": "https://www.facebook.com/people/Boss-Nanz-Coffee/61583881373548/",
+      "website": null,
+      "instagramUrl": null,
+      "tiktokUrl": null,
+      "hours": {},
+      "coffeeTypes": [],
+      "atmospheres": [],
+      "amenities": [],
+      "logo": "images/boss-nanz/logo.jpg",
+      "banner": "images/boss-nanz/banner.jpg",
+      "photos": [
+        "images/boss-nanz/photo-1.jpg",
+        "images/boss-nanz/photo-2.jpg",
+        "images/boss-nanz/photo-3.jpg"
+      ],
+      "menu": []
+    },
+    {
+      "id": "brew-heim-coffee",
+      "name": "Brew Heim Coffee",
+      "description": "Fuel your day with our PH ORIGINAL COFFEE, awaken your senses and we served with love and smile. For booking just contact: 09154724876\n\n• Open for Franchise\n• Open for Coffee station\n• Barista Trainer\n• Set-up a Coffee shop",
+      "address": "Triangle 2 Unit 4, Elloso St., Brgy. Imadejas (in front of RMN DXBC Butuan), Butuan City",
+      "latitude": 8.943305,
+      "longitude": 125.5291433,
+      "mall": null,
+      "phoneNumber": "+639154724876",
+      "facebookUrl": "https://www.facebook.com/people/Brew-Heim-Coffee/61572557787549/",
+      "website": null,
+      "instagramUrl": null,
+      "tiktokUrl": null,
+      "hours": {
+        "mon": {
+          "open": "08:00",
+          "close": "00:00"
+        },
+        "tue": {
+          "open": "08:00",
+          "close": "00:00"
+        },
+        "wed": {
+          "open": "08:00",
+          "close": "00:00"
+        },
+        "thu": {
+          "open": "08:00",
+          "close": "00:00"
+        },
+        "fri": {
+          "open": "08:00",
+          "close": "00:00"
+        },
+        "sat": {
+          "open": "08:00",
+          "close": "00:00"
+        }
+      },
+      "coffeeTypes": [],
+      "atmospheres": [],
+      "amenities": [],
+      "logo": "images/brew-heim/logo.jpg",
+      "banner": "images/brew-heim/banner.jpg",
+      "photos": [
+        "images/brew-heim/photo-1.jpg",
+        "images/brew-heim/photo-2.jpg",
+        "images/brew-heim/photo-3.jpg"
+      ],
+      "menu": [
+        {
+          "name": "Iced Dolce Coffee Latte",
+          "description": "A creamy blend of espresso, milk, and rich dolce syrup over ice.",
+          "price": null,
+          "category": "Latte",
+          "available": true,
+          "bestSeller": false,
+          "featured": false,
+          "image": "images/brew-heim/iced-dolce-latte.jpg"
+        },
+        {
+          "name": "Hot Coffee",
+          "description": "",
+          "price": null,
+          "category": "Hot Coffee",
+          "available": true,
+          "bestSeller": false,
+          "featured": false,
+          "image": "images/brew-heim/hot-coffee.jpg"
+        },
+        {
+          "name": "Mocha Frappe",
+          "description": "",
+          "price": null,
+          "category": "Mocha",
+          "available": true,
+          "bestSeller": false,
+          "featured": false,
+          "image": "images/brew-heim/mocha-frappe.jpg"
+        },
+        {
+          "name": "Biscoff Frappe",
+          "description": "",
+          "price": null,
+          "category": "Other Coffee",
+          "available": true,
+          "bestSeller": false,
+          "featured": false,
+          "image": "images/brew-heim/biscoff-frappe.jpg"
+        },
+        {
+          "name": "Matcha Frappe",
+          "description": "",
+          "price": null,
+          "category": "Other Coffee",
+          "available": true,
+          "bestSeller": false,
+          "featured": false,
+          "image": "images/brew-heim/matcha-frappe.jpg"
+        }
+      ]
+    },
+    {
+      "id": "bring-me-cafe",
+      "name": "Bring Me Cafe",
+      "description": "To bring you unforgettable flavors and exceptional service that keep you coming back for more.",
+      "address": "Pili Drive St. corner Ipil Road, Brgy. Dagohoy (near TESDA), Butuan City",
+      "latitude": 8.9452774,
+      "longitude": 125.5387008,
+      "mall": null,
+      "phoneNumber": "+639452600261",
+      "facebookUrl": "https://www.facebook.com/people/BRING-ME/61577036557872/",
+      "website": null,
+      "instagramUrl": "https://www.instagram.com/bringme_cafe",
+      "tiktokUrl": null,
+      "hours": {
+        "mon": {
+          "open": "17:00",
+          "close": "03:00"
+        },
+        "tue": {
+          "open": "17:00",
+          "close": "03:00"
+        },
+        "wed": {
+          "open": "17:00",
+          "close": "03:00"
+        },
+        "thu": {
+          "open": "17:00",
+          "close": "03:00"
+        },
+        "fri": {
+          "open": "17:00",
+          "close": "03:00"
+        },
+        "sat": {
+          "open": "17:00",
+          "close": "03:00"
+        },
+        "sun": {
+          "open": "17:00",
+          "close": "03:00"
+        }
+      },
+      "coffeeTypes": [],
+      "atmospheres": [],
+      "amenities": [],
+      "logo": "images/bring-me/logo.jpg",
+      "banner": "images/bring-me/banner.jpg",
+      "photos": [
+        "images/bring-me/photo-1.jpg",
+        "images/bring-me/photo-2.jpg",
+        "images/bring-me/photo-3.jpg"
+      ],
+      "menu": []
+    },
+    {
+      "id": "cafe-ethereal",
+      "name": "Café Ethereal",
+      "description": "We are a refined lifestyle café in Butuan offering calm dining experiences, thoughtfully crafted food and coffee, and a peaceful atmosphere designed for meaningful everyday moments.",
+      "address": "1st Pareja Subdivision, Bayanihan, Butuan City",
+      "latitude": 8.942833,
+      "longitude": 125.5230061,
+      "mall": null,
+      "phoneNumber": "+639626695353",
+      "facebookUrl": "https://www.facebook.com/people/Caf%C3%A9-Ethereal-Butuan/61590086683897/",
+      "website": null,
+      "instagramUrl": null,
+      "tiktokUrl": null,
+      "hours": {},
+      "coffeeTypes": [],
+      "atmospheres": [],
+      "amenities": [],
+      "logo": "images/cafe-ethereal/logo.jpg",
+      "banner": "images/cafe-ethereal/banner.png",
+      "photos": [
+        "images/cafe-ethereal/photo-1.jpg",
+        "images/cafe-ethereal/photo-2.jpg",
+        "images/cafe-ethereal/photo-3.jpg"
+      ],
+      "menu": []
+    },
+    {
+      "id": "chikape",
+      "name": "ChiKape",
+      "description": "ChiKape | Chika + Kape\n“Brewed for Chika”\nGood conversations start with good coffee.",
+      "address": "Purok 5, Zacor Rd, Brgy. Tandang Sora, Butuan City",
+      "latitude": 8.9473084,
+      "longitude": 125.5341411,
+      "mall": null,
+      "phoneNumber": "+639309649599",
+      "facebookUrl": "https://www.facebook.com/people/ChiKape/61593015301892/",
+      "website": null,
+      "instagramUrl": null,
+      "tiktokUrl": null,
+      "hours": {
+        "mon": {
+          "open": "00:00",
+          "close": "00:00"
+        },
+        "tue": {
+          "open": "00:00",
+          "close": "00:00"
+        },
+        "wed": {
+          "open": "00:00",
+          "close": "00:00"
+        },
+        "thu": {
+          "open": "00:00",
+          "close": "00:00"
+        },
+        "fri": {
+          "open": "00:00",
+          "close": "00:00"
+        },
+        "sat": {
+          "open": "00:00",
+          "close": "00:00"
+        },
+        "sun": {
+          "open": "00:00",
+          "close": "00:00"
+        }
+      },
+      "coffeeTypes": [],
+      "atmospheres": [],
+      "amenities": [],
+      "logo": "images/chikape/logo.jpg",
+      "banner": "images/chikape/banner.png",
+      "photos": [
+        "images/chikape/photo-1.jpg",
+        "images/chikape/photo-2.jpg",
+        "images/chikape/photo-3.jpg"
+      ],
+      "menu": []
+    },
+    {
+      "id": "dominics-egg-and-espresso",
+      "name": "Dominics Egg and Espresso",
+      "description": "Now Open! 🍳☕\nA cozy café-style food hub serving your favorite silog meals, coffee, sikwati, and more — all at student-friendly prices.\n✨ Affordable. Delicious. Instagrammable.",
+      "address": "P-7, Brgy. 17 Fort Poyohon, Butuan City",
+      "latitude": 8.9605608,
+      "longitude": 125.5386578,
+      "mall": null,
+      "phoneNumber": "+639054978616",
+      "facebookUrl": "https://www.facebook.com/people/Dominics-Egg-and-Espresso/61556624900350/",
+      "website": null,
+      "instagramUrl": null,
+      "tiktokUrl": null,
+      "hours": {},
+      "coffeeTypes": [],
+      "atmospheres": [],
+      "amenities": [],
+      "logo": "images/dominics/logo.jpg",
+      "banner": "images/dominics/banner.jpg",
+      "photos": [
+        "images/dominics/photo-1.jpg",
+        "images/dominics/photo-2.jpg",
+        "images/dominics/photo-3.jpg"
+      ],
+      "menu": []
+    },
+    {
+      "id": "dos-amica-cafe",
+      "name": "Dos Amica Cafe",
+      "description": "",
+      "address": "2nd Floor, T. Calo St. corner San Francisco St., Brgy. Leon Kilat, Butuan City",
+      "latitude": 8.9510897,
+      "longitude": 125.5423299,
+      "mall": null,
+      "phoneNumber": null,
+      "facebookUrl": "https://www.facebook.com/people/Dos-Amica-Cafe/61585904811434/",
+      "website": null,
+      "instagramUrl": "https://www.instagram.com/dosamicacafe",
+      "tiktokUrl": null,
+      "hours": {
+        "mon": {
+          "open": "10:00",
+          "close": "20:00"
+        },
+        "tue": {
+          "open": "10:00",
+          "close": "20:00"
+        },
+        "wed": {
+          "open": "10:00",
+          "close": "20:00"
+        },
+        "thu": {
+          "open": "10:00",
+          "close": "20:00"
+        },
+        "fri": {
+          "open": "10:00",
+          "close": "20:00"
+        },
+        "sat": {
+          "open": "12:00",
+          "close": "20:00"
+        }
+      },
+      "coffeeTypes": [],
+      "atmospheres": [],
+      "amenities": [],
+      "logo": "images/dos-amica/logo.jpg",
+      "banner": "images/dos-amica/banner.jpg",
+      "photos": [
+        "images/dos-amica/photo-1.jpg",
+        "images/dos-amica/photo-2.jpg"
+      ],
+      "menu": []
+    },
+    {
+      "id": "homebrew-662",
+      "name": "Homebrew 662",
+      "description": "Brewing comfort, one cup at a time.",
+      "address": "662 P. Burgos Ext., Brgy. Tandang Sora, Butuan City",
+      "latitude": 8.948818,
+      "longitude": 125.539598,
+      "mall": null,
+      "phoneNumber": null,
+      "facebookUrl": "https://www.facebook.com/homebrew662",
+      "website": null,
+      "instagramUrl": "https://www.instagram.com/homebrew662",
+      "tiktokUrl": null,
+      "hours": {},
+      "coffeeTypes": [],
+      "atmospheres": [],
+      "amenities": [],
+      "logo": "images/homebrew-662/logo.jpg",
+      "banner": "images/homebrew-662/banner.jpg",
+      "photos": [
+        "images/homebrew-662/photo-1.jpg",
+        "images/homebrew-662/photo-2.jpg",
+        "images/homebrew-662/photo-3.jpg"
+      ],
+      "menu": []
+    },
+    {
+      "id": "kaffeeklatsch-bistro-butuan",
+      "name": "Kaffeeklatsch Bistro Butuan",
+      "description": "Discover the warmth, flavors, and camaraderie that make this bistro truly special. The best coffee in town.",
+      "address": "C.T. Montalban Street, Imadejas Pob. (Bgy. 24), Butuan City",
+      "latitude": 8.9415327,
+      "longitude": 125.5310231,
+      "mall": null,
+      "phoneNumber": "+639706205070",
+      "facebookUrl": "https://www.facebook.com/people/Kaffeeklatsch-Bistro-Butuan/100076308219944/",
+      "website": null,
+      "instagramUrl": null,
+      "tiktokUrl": null,
+      "hours": {},
+      "coffeeTypes": [],
+      "atmospheres": [],
+      "amenities": [
+        "outdoorSeating"
+      ],
+      "logo": "images/kaffeeklatsch/logo.jpg",
+      "banner": "images/kaffeeklatsch/banner.png",
+      "photos": [
+        "images/kaffeeklatsch/photo-1.jpg",
+        "images/kaffeeklatsch/photo-2.jpg",
+        "images/kaffeeklatsch/photo-3.jpg"
+      ],
+      "menu": []
+    },
+    {
+      "id": "kapehe",
+      "name": "Kapehe",
+      "description": "Tara, Kapehe!",
+      "address": "Purok 17, Lower Mandacpan, San Vicente, Butuan City",
+      "latitude": 8.9070291,
+      "longitude": 125.5467055,
+      "mall": null,
+      "phoneNumber": null,
+      "facebookUrl": "https://www.facebook.com/people/Kapehe/61593391501176/",
+      "website": null,
+      "instagramUrl": "https://www.instagram.com/kapehe2026",
+      "tiktokUrl": null,
+      "hours": {},
+      "coffeeTypes": [],
+      "atmospheres": [],
+      "amenities": [],
+      "logo": "images/kapehe/logo.jpg",
+      "banner": "images/kapehe/banner.jpg",
+      "photos": [
+        "images/kapehe/photo-1.jpg",
+        "images/kapehe/photo-2.jpg",
+        "images/kapehe/photo-3.jpg"
+      ],
+      "menu": [],
+      "_pinNote": "Approximate pin: Purok 17 Lower Mandacpan (same spot Google Maps gives Verbeana Coffee, also Purok 17). Kapehe isn't on Google Maps — replace with the exact spot when known."
+    },
+    {
+      "id": "kurbada-cafe",
+      "name": "Kurbada Cafe",
+      "description": "Kape ta sa Kurbada. ☕",
+      "address": "P-2 Salvador Calo St., Upper Doongan, Butuan City",
+      "latitude": 8.9601394,
+      "longitude": 125.5223615,
+      "mall": null,
+      "phoneNumber": null,
+      "facebookUrl": "https://www.facebook.com/people/Kurbada-Cafe/61589931240486/",
+      "website": null,
+      "instagramUrl": null,
+      "tiktokUrl": null,
+      "hours": {
+        "mon": {
+          "open": "18:00",
+          "close": "00:00"
+        },
+        "tue": {
+          "open": "18:00",
+          "close": "00:00"
+        },
+        "wed": {
+          "open": "18:00",
+          "close": "00:00"
+        },
+        "thu": {
+          "open": "18:00",
+          "close": "00:00"
+        },
+        "fri": {
+          "open": "18:00",
+          "close": "00:00"
+        },
+        "sat": {
+          "open": "18:00",
+          "close": "00:00"
+        }
+      },
+      "coffeeTypes": [],
+      "atmospheres": [],
+      "amenities": [],
+      "logo": "images/kurbada/logo.jpg",
+      "banner": "images/kurbada/banner.jpg",
+      "photos": [
+        "images/kurbada/photo-1.jpg",
+        "images/kurbada/photo-2.jpg",
+        "images/kurbada/photo-3.jpg"
+      ],
+      "menu": []
+    },
+    {
+      "id": "lazy-lounge",
+      "name": "Lazy Lounge",
+      "description": "Strong minds. Soft places.",
+      "address": "Pili Drive, Brgy. Dagohoy, Butuan City",
+      "latitude": 8.9455501,
+      "longitude": 125.5380279,
+      "mall": null,
+      "phoneNumber": null,
+      "facebookUrl": "https://www.facebook.com/lazylounge08",
+      "website": null,
+      "instagramUrl": "https://www.instagram.com/lazy_lounge08",
+      "tiktokUrl": null,
+      "hours": {},
+      "coffeeTypes": [],
+      "atmospheres": [],
+      "amenities": [],
+      "logo": "images/lazy-lounge/logo.jpg",
+      "banner": "images/lazy-lounge/banner.jpg",
+      "photos": [
+        "images/lazy-lounge/photo-1.jpg",
+        "images/lazy-lounge/photo-2.jpg",
+        "images/lazy-lounge/photo-3.jpg"
+      ],
+      "menu": []
+    },
+    {
+      "id": "maria-s-sip-and-bites",
+      "name": "Maria's Sip and Bites",
+      "description": "",
+      "address": "220 Purok 3, Ampayon, Butuan City",
+      "latitude": 8.9581254,
+      "longitude": 125.6030915,
+      "mall": null,
+      "phoneNumber": "+639664608749",
+      "facebookUrl": "https://www.facebook.com/mariassipandbites",
+      "website": null,
+      "instagramUrl": "https://www.instagram.com/mariasipandbites",
+      "tiktokUrl": null,
+      "hours": {
+        "mon": {
+          "open": "11:00",
+          "close": "20:00"
+        },
+        "tue": {
+          "open": "11:00",
+          "close": "20:00"
+        },
+        "wed": {
+          "open": "11:00",
+          "close": "20:00"
+        },
+        "thu": {
+          "open": "11:00",
+          "close": "20:00"
+        },
+        "fri": {
+          "open": "11:00",
+          "close": "20:00"
+        },
+        "sun": {
+          "open": "11:00",
+          "close": "20:00"
+        }
+      },
+      "coffeeTypes": [],
+      "atmospheres": [],
+      "amenities": [],
+      "logo": "images/marias/logo.jpg",
+      "banner": "images/marias/banner.jpg",
+      "photos": [
+        "images/marias/photo-1.jpg",
+        "images/marias/photo-2.jpg"
+      ],
+      "menu": []
+    },
+    {
+      "id": "parada-brew",
+      "name": "Parada Brew",
+      "description": "Brewing around the corner. ☕️",
+      "address": "516 T. Sanchez St., Poblacion, Butuan City",
+      "latitude": 8.9446393,
+      "longitude": 125.5437086,
+      "mall": null,
+      "phoneNumber": null,
+      "facebookUrl": "https://www.facebook.com/people/Parada-Brew/61592458462076/",
+      "website": null,
+      "instagramUrl": null,
+      "tiktokUrl": null,
+      "hours": {
+        "mon": {
+          "open": "18:00",
+          "close": "00:00"
+        },
+        "tue": {
+          "open": "18:00",
+          "close": "00:00"
+        },
+        "wed": {
+          "open": "18:00",
+          "close": "00:00"
+        },
+        "thu": {
+          "open": "18:00",
+          "close": "00:00"
+        },
+        "fri": {
+          "open": "18:00",
+          "close": "00:00"
+        },
+        "sat": {
+          "open": "18:00",
+          "close": "00:00"
+        },
+        "sun": {
+          "open": "18:00",
+          "close": "00:00"
+        }
+      },
+      "coffeeTypes": [],
+      "atmospheres": [],
+      "amenities": [],
+      "logo": "images/parada-brew/logo.jpg",
+      "banner": "images/parada-brew/banner.jpg",
+      "photos": [
+        "images/parada-brew/photo-1.jpg",
+        "images/parada-brew/photo-2.jpg",
+        "images/parada-brew/photo-3.jpg"
+      ],
+      "menu": [],
+      "_pinNote": "Approximate pin (middle of T. Sanchez St.). Parada Brew isn't on Google Maps — replace with the exact spot when known."
+    },
+    {
+      "id": "street-grind-coffee-8600",
+      "name": "Street Grind Coffee 8600",
+      "description": "",
+      "address": "7th Street, Guingona Subd., Butuan City",
+      "latitude": 8.9434868,
+      "longitude": 125.5402994,
+      "mall": null,
+      "phoneNumber": "+639177000734",
+      "facebookUrl": "https://www.facebook.com/people/Street-Grind-Coffee-8600/61573524601671/",
+      "website": null,
+      "instagramUrl": null,
+      "tiktokUrl": null,
+      "hours": {},
+      "coffeeTypes": [],
+      "atmospheres": [],
+      "amenities": [],
+      "logo": "images/street-grind/logo.jpg",
+      "banner": "images/street-grind/banner.jpg",
+      "photos": [
+        "images/street-grind/photo-1.jpg",
+        "images/street-grind/photo-2.jpg",
+        "images/street-grind/photo-3.jpg"
+      ],
+      "menu": []
+    },
+    {
+      "id": "the-garden-brewtique-cafe",
+      "name": "The Garden Brewtique Cafe",
+      "description": "Ongoing soft opening! ☕ Brewing from 10AM to 9PM!",
+      "address": "Beside The PowerHouse, Purok 3 Ambangan, Brgy. Ambago, Butuan City",
+      "latitude": 8.9562216,
+      "longitude": 125.5076993,
+      "mall": null,
+      "phoneNumber": "+639216312846",
+      "facebookUrl": "https://www.facebook.com/people/The-Garden-Brewtique-Cafe/61589392931446/",
+      "website": null,
+      "instagramUrl": "https://www.instagram.com/tgbrewtique.cafe",
+      "tiktokUrl": null,
+      "hours": {
+        "mon": {
+          "open": "10:00",
+          "close": "21:00"
+        },
+        "tue": {
+          "open": "10:00",
+          "close": "21:00"
+        },
+        "wed": {
+          "open": "10:00",
+          "close": "21:00"
+        },
+        "thu": {
+          "open": "10:00",
+          "close": "21:00"
+        },
+        "fri": {
+          "open": "10:00",
+          "close": "21:00"
+        },
+        "sat": {
+          "open": "10:00",
+          "close": "21:00"
+        },
+        "sun": {
+          "open": "10:00",
+          "close": "21:00"
+        }
+      },
+      "coffeeTypes": [],
+      "atmospheres": [],
+      "amenities": [],
+      "logo": "images/garden-brewtique/logo.jpg",
+      "banner": "images/garden-brewtique/banner.jpg",
+      "photos": [
+        "images/garden-brewtique/photo-1.jpg",
+        "images/garden-brewtique/photo-2.jpg",
+        "images/garden-brewtique/photo-3.jpg"
+      ],
+      "menu": []
+    },
+    {
+      "id": "the-riverbrew-cafe",
+      "name": "The RiverBrew Cafe",
+      "description": "Butuan’s first coffee camp by the river\n🌊 Brewed by the river, made for moments\n🌿 Coffee • Nature • Conversations",
+      "address": "F. Durano St. corner A.D. Curato St., Purok 2, Brgy. Agao (Riverside), Butuan City",
+      "latitude": 8.9433244,
+      "longitude": 125.5434775,
+      "mall": null,
+      "phoneNumber": null,
+      "facebookUrl": "https://www.facebook.com/people/The-RiverBrew-Cafe/61573302194521/",
+      "website": null,
+      "instagramUrl": null,
+      "tiktokUrl": null,
+      "hours": {},
+      "coffeeTypes": [],
+      "atmospheres": [],
+      "amenities": [],
+      "logo": "images/riverbrew/logo.jpg",
+      "banner": "images/riverbrew/banner.jpg",
+      "photos": [
+        "images/riverbrew/photo-1.jpg",
+        "images/riverbrew/photo-2.jpg",
+        "images/riverbrew/photo-3.jpg"
+      ],
+      "menu": []
+    },
+    {
+      "id": "verbeana-coffee",
+      "name": "Verbeana Coffee",
+      "description": "Verbeana Coffee (Social Enterprise)\nBrewing quality coffee with a purpose and serving comforting food made to be enjoyed.\nBuilt on the foundation of warmth, genuine hospitality, and a deep commitment to honoring God in our crafts 💜",
+      "address": "Purok 17, Lower Mandacpan, San Vicente, Butuan City",
+      "latitude": 8.9070291,
+      "longitude": 125.5467055,
+      "mall": null,
+      "phoneNumber": "+639486827843",
+      "facebookUrl": "https://www.facebook.com/people/Verbeana-Coffee/61592420227782/",
+      "website": null,
+      "instagramUrl": null,
+      "tiktokUrl": null,
+      "hours": {
+        "mon": {
+          "open": "15:00",
+          "close": "00:00"
+        },
+        "tue": {
+          "open": "15:00",
+          "close": "00:00"
+        },
+        "wed": {
+          "open": "15:00",
+          "close": "00:00"
+        },
+        "thu": {
+          "open": "15:00",
+          "close": "00:00"
+        },
+        "fri": {
+          "open": "15:00",
+          "close": "00:00"
+        },
+        "sat": {
+          "open": "15:00",
+          "close": "00:00"
+        },
+        "sun": {
+          "open": "18:00",
+          "close": "00:00"
+        }
+      },
+      "coffeeTypes": [],
+      "atmospheres": [],
+      "amenities": [
+        "wifi"
+      ],
+      "logo": "images/verbeana/logo.jpg",
+      "banner": "images/verbeana/banner.png",
+      "photos": [
+        "images/verbeana/photo-1.jpg",
+        "images/verbeana/photo-2.jpg",
+        "images/verbeana/photo-3.jpg"
+      ],
+      "menu": []
+    },
+    {
+      "id": "wd",
+      "name": "WD",
+      "description": "I can do all things through Christ who strengthens me.",
+      "address": "South Montilla Blvd., Butuan City",
+      "latitude": 8.9327566,
+      "longitude": 125.5402001,
+      "mall": null,
+      "phoneNumber": "+639107576101",
+      "facebookUrl": "https://www.facebook.com/people/WD/61569159827404/",
+      "website": null,
+      "instagramUrl": null,
+      "tiktokUrl": null,
+      "hours": {
+        "sat": {
+          "open": "18:00",
+          "close": "00:00"
+        },
+        "sun": {
+          "open": "18:00",
+          "close": "00:00"
+        },
+        "mon": {
+          "open": "18:00",
+          "close": "00:00"
+        },
+        "tue": {
+          "open": "18:00",
+          "close": "00:00"
+        },
+        "wed": {
+          "open": "18:00",
+          "close": "00:00"
+        },
+        "thu": {
+          "open": "18:00",
+          "close": "00:00"
+        }
+      },
+      "coffeeTypes": [],
+      "atmospheres": [],
+      "amenities": [],
+      "logo": "images/wd/logo.jpg",
+      "banner": "images/wd/banner.jpg",
+      "photos": [
+        "images/wd/photo-1.jpg",
+        "images/wd/photo-2.jpg",
+        "images/wd/photo-3.jpg"
+      ],
+      "menu": [],
+      "_pinNote": "Approximate pin (South Montilla Blvd, near Ang Dating Daan center). Wapidos isn't on Google Maps — replace with the exact spot when known."
+    }
+  ]
+}

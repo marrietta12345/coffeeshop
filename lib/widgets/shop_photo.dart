@@ -37,6 +37,39 @@ class ShopPhoto extends StatelessWidget {
   }
 }
 
+/// A café's card image on Explore and the Map: its logo (whole, on white,
+/// with a little breathing room), else its banner / first photo filling
+/// the box, else the branded placeholder.
+class ShopLogoImage extends StatelessWidget {
+  final CoffeeShop shop;
+  final double width;
+  final double height;
+
+  const ShopLogoImage({super.key, required this.shop, required this.width, required this.height});
+
+  @override
+  Widget build(BuildContext context) {
+    final placeholder = _NoPhotoPlaceholder(width: width, height: height);
+    final logo = shop.logoUrl?.trim() ?? '';
+    if (logo.isNotEmpty) {
+      return Container(
+        width: width,
+        height: height,
+        color: Colors.white,
+        padding: EdgeInsets.all((width.isFinite ? width : (height.isFinite ? height : 120)) * 0.08),
+        child: Image.network(
+          logo,
+          fit: BoxFit.contain,
+          errorBuilder: (_, __, ___) => placeholder,
+        ),
+      );
+    }
+    final cover = ShopBanner.urlFor(shop);
+    if (cover == null) return placeholder;
+    return FittedImage.network(cover, width: width, height: height, fit: BoxFit.cover, fallback: placeholder);
+  }
+}
+
 /// A café's cover image for visual lists (Collections): its uploaded
 /// banner, else its first gallery photo, else its logo — whatever the
 /// shop already has — falling back to the branded placeholder. Nothing

@@ -193,6 +193,10 @@ class _ShopDetailPageState extends State<ShopDetailPage> {
   /// In-app directions on OpenStreetMap to this café's own coordinates —
   /// never an external maps app.
   void _openDirections() {
+    if (!_shop.hasLocation) {
+      showTopBanner(context, "This café's map location isn't set yet.", isSuccess: false);
+      return;
+    }
     Navigator.push(context, slideUpRoute(DirectionsPage(shop: _shop)));
   }
 
@@ -674,14 +678,14 @@ class _OverviewTab extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         SizedBox(
-          height: 72,
+          height: 76,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: menuItems.length.clamp(0, 4),
             separatorBuilder: (_, __) => const SizedBox(width: 8),
             itemBuilder: (context, index) => ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: MenuItemImage(item: menuItems[index], shop: shop, fallbackIndex: index, width: 96, height: 72),
+              child: MenuItemImage(item: menuItems[index], shop: shop, fallbackIndex: index, width: 76, height: 76),
             ),
           ),
         ),

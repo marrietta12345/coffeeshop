@@ -144,7 +144,7 @@ class _CoffeeReviewFormPageState extends State<CoffeeReviewFormPage> {
                           ClipRRect(
                             borderRadius: BorderRadius.circular(12),
                             child: widget.coffee.hasImage
-                                ? FittedImage.network(widget.coffee.imageUrl!, width: 48, height: 36, fit: BoxFit.cover, fallback: _cupTile())
+                                ? FittedImage.network(widget.coffee.imageUrl!, width: 44, height: 44, fallback: _cupTile())
                                 : _cupTile(),
                           ),
                           const SizedBox(width: 12),
@@ -309,8 +309,8 @@ class _CoffeeReviewFormPageState extends State<CoffeeReviewFormPage> {
   }
 
   Widget _cupTile() => Container(
-        width: 48,
-        height: 36,
+        width: 44,
+        height: 44,
         color: AppColors.primaryBrown.withOpacity(0.12),
         child: const Icon(Icons.local_cafe_rounded, color: AppColors.primaryBrown, size: 22),
       );

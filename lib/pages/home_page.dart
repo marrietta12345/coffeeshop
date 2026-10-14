@@ -280,7 +280,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin, Widg
   }
 
   // Real shops owners have created via sign-up, live from Firestore.
-  List<CoffeeShop> get _filteredShops => _liveShops;
+  /// The map only shows cafés whose location is set.
+  List<CoffeeShop> get _filteredShops => _liveShops.where((s) => s.hasLocation).toList();
 
   static const _distanceCalculator = Distance();
   static const double _nearbyRadiusMeters = 20000; // 20 km
@@ -822,7 +823,7 @@ class _SearchSuggestionsCard extends StatelessWidget {
                         children: [
                           ClipRRect(
                             borderRadius: BorderRadius.circular(10),
-                            child: ShopPhoto(shop: shop, width: 52, height: 39),
+                            child: ShopLogoImage(shop: shop, width: 52, height: 39),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -1045,7 +1046,7 @@ class _ShopListCard extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(14),
-              child: ShopPhoto(shop: shop, width: 64, height: 48),
+              child: ShopLogoImage(shop: shop, width: 64, height: 48),
             ),
             const SizedBox(width: 12),
             Expanded(

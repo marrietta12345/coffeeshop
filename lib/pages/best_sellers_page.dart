@@ -80,7 +80,7 @@ class _BestSellerListItem extends StatelessWidget {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: MenuItemImage(item: item, shop: shop, fallbackIndex: rank + 30, width: 72, height: 54),
+            child: MenuItemImage(item: item, shop: shop, fallbackIndex: rank + 30, width: 60, height: 60),
           ),
           const SizedBox(width: 14),
           Expanded(

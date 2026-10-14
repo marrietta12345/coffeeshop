@@ -101,7 +101,7 @@ class ShopListCard extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(10),
-              child: ShopPhoto(shop: shop, width: 72, height: 54),
+              child: ShopLogoImage(shop: shop, width: 72, height: 54),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -123,10 +123,12 @@ class ShopListCard extends StatelessWidget {
                         shop.rating.toStringAsFixed(1),
                         style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textDark),
                       ),
-                      const SizedBox(width: 8),
-                      Text('•', style: TextStyle(color: Colors.grey.shade400)),
-                      const SizedBox(width: 8),
-                      Text(distanceLabel, style: const TextStyle(fontSize: 12, color: AppColors.textGrey)),
+                      if (distanceLabel.isNotEmpty) ...[
+                        const SizedBox(width: 8),
+                        Text('•', style: TextStyle(color: Colors.grey.shade400)),
+                        const SizedBox(width: 8),
+                        Text(distanceLabel, style: const TextStyle(fontSize: 12, color: AppColors.textGrey)),
+                      ],
                     ],
                   ),
                   if (shop.locationLabel.isNotEmpty) ...[

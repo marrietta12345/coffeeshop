@@ -6,21 +6,22 @@ import '../theme/app_colors.dart';
 /// stretched, never cropped. Any space left over is a soft neutral
 /// backdrop, so different photo shapes still give identical cards.
 ///
-/// Exception — coffee (menu) photos FILL their 4:3 box (BoxFit.cover,
-/// centered), like food apps: a clean, uniform menu. The owner sees the
-/// exact framing before saving, and customers can tap the Coffee Details
-/// photo to see it whole.
+/// Coffee drink photos follow the same rule in a SQUARE box: the whole
+/// drink (cup, toppings, foam) is always visible, centered on the neutral
+/// backdrop — menu thumbnails, menu cards and the larger Coffee Details
+/// image alike.
 ///
 /// Standard containers:
 ///   café header / banner    16:9
-///   coffee & café images     4:3   (menu, details, thumbnails)
+///   café images              4:3   (cards, thumbnails)
+///   coffee drinks            1:1   (menu, details, thumbnails)
 ///   review photos            fixed thumbnail box, photo kept whole
 ///   avatars & logos          1:1   (round)
 class ImageRatios {
   ImageRatios._();
 
   static const double banner = 16 / 9;
-  static const double coffee = 4 / 3;
+  static const double coffee = 1;
   static const double thumbnail = 4 / 3;
   static const double square = 1;
 }
@@ -35,16 +36,28 @@ class FittedImage extends StatelessWidget {
   final double? width;
   final double? height;
   final Widget? fallback; // shown if the image fails to load
-  final BoxFit fit; // contain = whole photo; cover = fills the box (coffee photos)
+  final BoxFit fit; // contain = whole photo; cover = fills the box
+  // Shown while the photo loads (instead of a spinner); the photo then
+  // fades in over it.
+  final Widget? loading;
 
-  const FittedImage({super.key, required this.image, this.width, this.height, this.fallback, this.fit = BoxFit.contain});
+  const FittedImage({
+    super.key,
+    required this.image,
+    this.width,
+    this.height,
+    this.fallback,
+    this.fit = BoxFit.contain,
+    this.loading,
+  });
 
   /// A network photo (Supabase Storage URL).
-  FittedImage.network(String url, {super.key, this.width, this.height, this.fallback, this.fit = BoxFit.contain})
+  FittedImage.network(String url, {super.key, this.width, this.height, this.fallback, this.fit = BoxFit.contain, this.loading})
       : image = NetworkImage(url);
 
   @override
   Widget build(BuildContext context) {
+    final placeholder = loading;
     return Container(
       width: width,
       height: height,
@@ -54,12 +67,31 @@ class FittedImage extends StatelessWidget {
         width: width,
         height: height,
         fit: fit,
-        loadingBuilder: (context, child, progress) {
-          if (progress == null) return child;
-          return const Center(
-            child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primaryBrown)),
-          );
-        },
+        frameBuilder: placeholder == null
+            ? null
+            : (context, child, frame, loadedSynchronously) {
+                if (loadedSynchronously) return child;
+                return Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    if (frame == null) placeholder,
+                    AnimatedOpacity(
+                      opacity: frame == null ? 0 : 1,
+                      duration: const Duration(milliseconds: 250),
+                      curve: Curves.easeOut,
+                      child: child,
+                    ),
+                  ],
+                );
+              },
+        loadingBuilder: placeholder != null
+            ? null
+            : (context, child, progress) {
+                if (progress == null) return child;
+                return const Center(
+                  child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primaryBrown)),
+                );
+              },
         errorBuilder: (context, error, stackTrace) =>
             fallback ?? const Center(child: Icon(Icons.broken_image_outlined, color: AppColors.textGrey)),
       ),
@@ -75,7 +107,6 @@ Future<bool> confirmPhoto(
   required ImageProvider image,
   required double aspectRatio,
   String title = 'Use this photo?',
-  BoxFit fit = BoxFit.contain,
 }) async {
   final use = await showModalBottomSheet<bool>(
     context: context,
@@ -91,12 +122,9 @@ Future<bool> confirmPhoto(
           children: [
             Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.textDark)),
             const SizedBox(height: 4),
-            Text(
-              fit == BoxFit.cover
-                  ? 'This is how it will look on your menu. The photo fills the frame, so the edges may be trimmed — '
-                      'square or landscape photos look best.'
-                  : 'This is how it will look. Your whole photo is kept — nothing is cropped or stretched.',
-              style: const TextStyle(fontSize: 12, color: AppColors.textGrey, height: 1.4),
+            const Text(
+              'This is how it will look. Your whole photo is kept — nothing is cropped or stretched.',
+              style: TextStyle(fontSize: 12, color: AppColors.textGrey, height: 1.4),
             ),
             const SizedBox(height: 14),
             // The real display box, kept small enough to fit short (landscape) screens.
@@ -107,7 +135,7 @@ Future<bool> confirmPhoto(
                   borderRadius: BorderRadius.circular(14),
                   child: AspectRatio(
                     aspectRatio: aspectRatio,
-                    child: FittedImage(image: image, width: double.infinity, height: double.infinity, fit: fit),
+                    child: FittedImage(image: image, width: double.infinity, height: double.infinity),
                   ),
                 ),
               ),

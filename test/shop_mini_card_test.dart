@@ -45,4 +45,27 @@ void main() {
     expect(find.text('50%'), findsOneWidget);
     expect(find.textContaining('Match for'), findsNothing);
   });
+
+  testWidgets('the card shows the café logo when it has one', (tester) async {
+    const logo = 'https://example.com/logo.jpg';
+    final shop = CoffeeShop(
+      id: 'shop1', name: 'StarR', description: '', address: 'Butuan City', openTime: '', closeTime: '',
+      latitude: 0, longitude: 0, rating: 0, category: ShopCategory.coffee,
+      logoUrl: logo, bannerUrl: 'https://example.com/banner.jpg', photoUrls: const ['https://example.com/1.jpg'],
+    );
+    await _pump(tester, ShopMiniCard(shop: shop, distanceLabel: '', onTap: () {}));
+    final image = tester.widget<Image>(find.byType(Image).first);
+    expect((image.image as NetworkImage).url, logo);
+    expect(image.fit, BoxFit.contain); // whole logo, never cropped
+  });
+
+  testWidgets('without a logo the card shows the banner', (tester) async {
+    final shop = CoffeeShop(
+      id: 'shop1', name: 'StarR', description: '', address: 'Butuan City', openTime: '', closeTime: '',
+      latitude: 0, longitude: 0, rating: 0, category: ShopCategory.coffee,
+      bannerUrl: 'https://example.com/banner.jpg', photoUrls: const ['https://example.com/1.jpg'],
+    );
+    await _pump(tester, ShopMiniCard(shop: shop, distanceLabel: '', onTap: () {}));
+    expect((tester.widget<Image>(find.byType(Image).first).image as NetworkImage).url, 'https://example.com/banner.jpg');
+  });
 }

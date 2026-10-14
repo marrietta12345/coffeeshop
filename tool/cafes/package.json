@@ -1,0 +1,13 @@
+{
+  "name": "kafelo-cafe-import",
+  "private": true,
+  "type": "module",
+  "description": "Imports tool/cafes/cafes.json into Firebase as regular Kafelo cafés.",
+  "scripts": {
+    "check": "node import_cafes.mjs --dry-run",
+    "import": "node import_cafes.mjs"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.0.0"
+  }
+}

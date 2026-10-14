@@ -35,7 +35,7 @@ class BestSellerTile extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(10),
-              child: MenuItemImage(item: item, shop: shop, fallbackIndex: item.hashCode % 20, width: 64, height: 48),
+              child: MenuItemImage(item: item, shop: shop, fallbackIndex: item.hashCode % 20, width: 56, height: 56),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -63,7 +63,7 @@ class BestSellerTile extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  '₱${item.price.toStringAsFixed(0)}',
+                  MenuItem.formatPrice(item.price),
                   style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5, color: AppColors.textDark),
                 ),
               ],

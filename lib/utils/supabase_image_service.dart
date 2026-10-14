@@ -70,7 +70,10 @@ class SupabaseImageService {
     final marker = '/object/public/$bucketName/';
     final index = publicUrl.indexOf(marker);
     if (index == -1) return null;
-    return publicUrl.substring(index + marker.length);
+    // Links from the café import end with "?v=<version>" — not part of the path.
+    final path = publicUrl.substring(index + marker.length);
+    final query = path.indexOf('?');
+    return query == -1 ? path : path.substring(0, query);
   }
 }
 

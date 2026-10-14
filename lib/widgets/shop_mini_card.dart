@@ -61,7 +61,7 @@ class ShopMiniCard extends StatelessWidget {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  ShopPhoto(shop: shop, width: double.infinity, height: double.infinity),
+                  ShopLogoImage(shop: shop, width: double.infinity, height: double.infinity),
                   Positioned(top: 6, left: 6, child: OpenStatusBadge(hours: shop.hours)),
                   if ((matchPercent ?? 0) > 0)
                     Positioned(
@@ -111,7 +111,7 @@ class ShopMiniCard extends StatelessWidget {
                       ),
                       Expanded(
                         child: Text(
-                          ' · $distance',
+                          distance.isEmpty ? '' : ' · $distance',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(fontSize: 11, color: AppColors.textGrey),

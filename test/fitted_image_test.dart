@@ -14,7 +14,7 @@ final _pixel = MemoryImage(base64Decode(
 void main() {
   test('standard containers', () {
     expect(ImageRatios.banner, 16 / 9);
-    expect(ImageRatios.coffee, 4 / 3);
+    expect(ImageRatios.coffee, 1);
     expect(ImageRatios.thumbnail, 4 / 3);
     expect(ImageRatios.square, 1);
   });
@@ -47,7 +47,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Use this photo?'), findsOneWidget);
     expect(find.byType(AspectRatio), findsOneWidget);
-    expect(tester.widget<AspectRatio>(find.byType(AspectRatio)).aspectRatio, 4 / 3);
+    expect(tester.widget<AspectRatio>(find.byType(AspectRatio)).aspectRatio, ImageRatios.coffee);
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
     expect(result, isFalse);
@@ -59,36 +59,56 @@ void main() {
     expect(result, isTrue);
   });
 
-  testWidgets('coffee photos fill their 4:3 box (centered), like food apps', (tester) async {
+  testWidgets('coffee photos show the whole drink in a square box', (tester) async {
     final shop = CoffeeShop(
       id: 'shop1', ownerId: 'owner1', name: 'Brew Haven', description: '', address: 'Butuan City',
       openTime: '8 AM', closeTime: '8 PM', latitude: 0, longitude: 0, rating: 0, category: ShopCategory.coffee,
     );
     const item = MenuItem(name: 'Iced Spanish Latte', description: '', price: 200, imageUrl: 'https://example.com/latte.jpg');
     await tester.pumpWidget(MaterialApp(
-      home: Center(child: MenuItemImage(item: item, shop: shop, fallbackIndex: 0, width: 160, height: 120)),
+      home: Center(child: MenuItemImage(item: item, shop: shop, fallbackIndex: 0, width: 140, height: 140 / ImageRatios.coffee)),
     ));
-    final image = tester.widget<Image>(find.byType(Image));
-    expect(image.fit, BoxFit.cover);
-    expect(image.alignment, Alignment.center);
-    expect(tester.getSize(find.byType(FittedImage)), const Size(160, 120));
+    final photo = find.byWidgetPredicate((w) => w is Image && w.image is NetworkImage);
+    expect(tester.widget<Image>(photo).fit, BoxFit.contain); // never cropped or stretched
+    expect(tester.getSize(find.byType(FittedImage)), const Size(140, 140));
+    // While it loads: the faint Kafelo logo (no spinner).
+    expect(find.byType(KafeloLogoTile), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
   });
 
-  testWidgets('the coffee photo preview shows the filled framing and a tip', (tester) async {
+  testWidgets('a coffee without a photo shows the Kafelo logo (+ caption on big boxes)', (tester) async {
+    final shop = CoffeeShop(
+      id: 'shop1', ownerId: 'owner1', name: 'Brew Haven', description: '', address: 'Butuan City',
+      openTime: '8 AM', closeTime: '8 PM', latitude: 0, longitude: 0, rating: 0, category: ShopCategory.coffee,
+    );
+    const item = MenuItem(name: 'Americano', description: '', price: 110);
+    await tester.pumpWidget(MaterialApp(
+      home: Column(children: [
+        MenuItemImage(item: item, shop: shop, fallbackIndex: 0, width: 200, height: 200),
+        MenuItemImage(item: item, shop: shop, fallbackIndex: 0, width: 48, height: 48),
+      ]),
+    ));
+    expect(find.text('No drink image available'), findsOneWidget); // big box only
+    final logos = find.byWidgetPredicate(
+        (w) => w is Image && w.image is AssetImage && (w.image as AssetImage).assetName == 'lib/images/kafelo_logo.png');
+    expect(logos, findsNWidgets(2));
+  });
+
+  testWidgets('the coffee photo preview keeps the whole photo', (tester) async {
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.devicePixelRatio = 2.625;
     addTearDown(tester.view.reset);
     await tester.pumpWidget(MaterialApp(
       home: Builder(
         builder: (context) => TextButton(
-          onPressed: () => confirmPhoto(context, image: _pixel, aspectRatio: ImageRatios.coffee, fit: BoxFit.cover),
+          onPressed: () => confirmPhoto(context, image: _pixel, aspectRatio: ImageRatios.coffee),
           child: const Text('pick'),
         ),
       ),
     ));
     await tester.tap(find.text('pick'));
     await tester.pumpAndSettle();
-    expect(tester.widget<Image>(find.byType(Image)).fit, BoxFit.cover);
-    expect(find.textContaining('square or landscape photos look best'), findsOneWidget);
+    expect(tester.widget<Image>(find.byType(Image)).fit, BoxFit.contain);
+    expect(tester.widget<AspectRatio>(find.byType(AspectRatio)).aspectRatio, 1);
   });
 }

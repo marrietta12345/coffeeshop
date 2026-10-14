@@ -95,7 +95,7 @@ class _CoffeeDetailPageState extends State<CoffeeDetailPage> {
             children: [
               ClipRRect(
                 borderRadius: const BorderRadius.vertical(bottom: Radius.circular(28)),
-                // Same 4:3 box as the menu, filled; tap to see the whole photo.
+                // Larger square image showing the whole drink; tap to zoom.
                 child: AspectRatio(
                   aspectRatio: ImageRatios.coffee,
                   child: GestureDetector(

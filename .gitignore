@@ -43,3 +43,9 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Kafelo café import — Firebase admin key (never commit) and its packages
+tool/cafes/service-account.json
+*firebase-adminsdk*.json
+tool/cafes/node_modules/
+tool/cafes/.upload-cache.json

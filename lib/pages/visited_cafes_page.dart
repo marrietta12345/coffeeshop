@@ -440,11 +440,12 @@ class _TodaysPick extends StatelessWidget {
 
         final CoffeeShop pick;
         final String detail;
-        if (here != null) {
+        final located = undiscovered.where((s) => s.hasLocation).toList();
+        if (here != null && located.isNotEmpty) {
           const calculator = Distance();
           double meters(CoffeeShop s) => calculator.as(LengthUnit.Meter, here, LatLng(s.latitude, s.longitude));
-          pick = undiscovered.reduce((a, b) => meters(a) <= meters(b) ? a : b);
-          detail = '${formatDistance(here, LatLng(pick.latitude, pick.longitude))} away • ★ ${pick.rating.toStringAsFixed(1)}';
+          pick = located.reduce((a, b) => meters(a) <= meters(b) ? a : b);
+          detail = '${formatDistance(here, LatLng(pick.latitude, pick.longitude))} • ★ ${pick.rating.toStringAsFixed(1)}';
         } else {
           pick = undiscovered.reduce((a, b) => a.rating >= b.rating ? a : b);
           detail = '★ ${pick.rating.toStringAsFixed(1)} • Top rated';
