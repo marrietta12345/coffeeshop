@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
 import 'coffee_preferences_page.dart';
 import '../models/coffee_preferences.dart';
 import '../utils/user_profile_service.dart';
@@ -217,9 +218,31 @@ class _ShopDetailPageState extends State<ShopDetailPage> {
     }
   }
 
-  void _openShare() {
-    // TODO: wire up the `share_plus` package for a real native share sheet.
-    showTopBanner(context, 'Sharing is coming soon!', isSuccess: true);
+  /// Opens the phone's share sheet with the café's name, address and a map link.
+  Future<void> _openShare() async {
+    final shop = _shop;
+    final lines = <String>[
+      '${shop.name} ☕',
+      if (shop.mallName?.trim().isNotEmpty ?? false)
+        'Inside ${shop.mallName!.trim()}${shop.mallFloorAndUnit != null ? ', ${shop.mallFloorAndUnit}' : ''}',
+      if (shop.address.trim().isNotEmpty) shop.address.trim(),
+      if (shop.hasLocation)
+        'Open on map: https://www.openstreetmap.org/?mlat=${shop.latitude}&mlon=${shop.longitude}#map=18/${shop.latitude}/${shop.longitude}',
+      '',
+      'Shared from Kafelo',
+    ];
+    // iPads place the share sheet next to the page; phones ignore this.
+    final box = context.findRenderObject() as RenderBox?;
+    try {
+      await SharePlus.instance.share(ShareParams(
+        text: lines.join('\n'),
+        subject: shop.name,
+        sharePositionOrigin: box == null ? null : box.localToGlobal(Offset.zero) & box.size,
+      ));
+    } catch (e) {
+      debugPrint('Sharing failed: $e');
+      if (mounted) showTopBanner(context, "Couldn't open sharing. Please try again.", isSuccess: false);
+    }
   }
 
   Future<void> _openAddReview() async {
