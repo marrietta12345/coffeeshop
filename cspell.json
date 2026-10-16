@@ -1,0 +1,6 @@
+{
+  "version": "0.2",
+  "language": "en",
+  "words": ["Kafelo", "kafelo"],
+  "ignoreRegExpList": ["/eyJ[\\w-]+\\.[\\w-]+\\.[\\w-]+/g"]
+}
