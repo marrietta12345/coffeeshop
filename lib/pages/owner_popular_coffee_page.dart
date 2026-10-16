@@ -181,7 +181,7 @@ class _InsightCard extends StatelessWidget {
           Container(
             width: 42,
             height: 42,
-            decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), shape: BoxShape.circle),
+            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), shape: BoxShape.circle),
             child: const Icon(Icons.favorite_rounded, color: Colors.white, size: 20),
           ),
           const SizedBox(width: 12),
@@ -196,7 +196,7 @@ class _InsightCard extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   'Customers hearted $coffees ${coffees == 1 ? 'coffee' : 'coffees'} on your menu',
-                  style: TextStyle(color: Colors.white.withOpacity(0.75), fontSize: 12),
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.75), fontSize: 12),
                 ),
               ],
             ),

@@ -1,7 +1,7 @@
 import 'dart:io' show SocketException;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'dart:ui' show SemanticsFlag;
+import 'dart:ui' show Tristate;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -204,7 +204,7 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
 
       Finder mode(String label) => find.bySemanticsLabel(RegExp('^$label'));
-      bool isSelected(String label) => tester.getSemantics(mode(label)).hasFlag(SemanticsFlag.isSelected);
+      bool isSelected(String label) => tester.getSemantics(mode(label)).flagsCollection.isSelected == Tristate.isTrue;
       expect(mode('Walk'), findsOneWidget);
       expect(mode('Bike'), findsOneWidget);
       expect(mode('Car'), findsOneWidget);

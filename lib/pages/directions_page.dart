@@ -228,7 +228,7 @@ class _DirectionsPageState extends State<DirectionsPage> {
   /// Shows "You", the café and the whole route.
   void _fitAll() {
     if (!_mapReady) return;
-    final points = [_cafe, if (_me != null) _me!, ...?_route?.points];
+    final points = [_cafe, ?_me, ...?_route?.points];
     if (points.length < 2) {
       _mapController.move(_cafe, 16);
       return;
@@ -378,7 +378,7 @@ class _StatusChip extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(22),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.12), blurRadius: 8, offset: const Offset(0, 2))],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 8, offset: const Offset(0, 2))],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -443,7 +443,7 @@ class _InfoPanel extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.12), blurRadius: 18, offset: const Offset(0, -4))],
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 18, offset: const Offset(0, -4))],
         ),
         child: SafeArea(
           top: false,
@@ -478,7 +478,7 @@ class _InfoPanel extends StatelessWidget {
                       width: 40,
                       height: 40,
                       padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(color: AppColors.primaryBrown.withOpacity(0.12), shape: BoxShape.circle),
+                      decoration: BoxDecoration(color: AppColors.primaryBrown.withValues(alpha: 0.12), shape: BoxShape.circle),
                       child: Image.asset('lib/images/kafelo_logo.png', color: AppColors.primaryBrown),
                     ),
                     const SizedBox(width: 12),
@@ -546,7 +546,7 @@ class _InfoPanel extends StatelessWidget {
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppColors.primaryBrown,
                             minimumSize: const Size.fromHeight(46),
-                            side: BorderSide(color: AppColors.primaryBrown.withOpacity(0.5)),
+                            side: BorderSide(color: AppColors.primaryBrown.withValues(alpha: 0.5)),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
                         ),
@@ -721,7 +721,7 @@ class _YouDot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(shape: BoxShape.circle, color: const Color(0xFF4285F4).withOpacity(0.2)),
+      decoration: BoxDecoration(shape: BoxShape.circle, color: const Color(0xFF4285F4).withValues(alpha: 0.2)),
       child: Center(
         child: Container(
           width: 16,
@@ -730,7 +730,7 @@ class _YouDot extends StatelessWidget {
             shape: BoxShape.circle,
             color: const Color(0xFF4285F4),
             border: Border.all(color: Colors.white, width: 3),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 4)],
+            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 4)],
           ),
         ),
       ),
@@ -756,7 +756,7 @@ class _CafePin extends StatelessWidget {
             shape: BoxShape.circle,
             color: AppColors.primaryBrown,
             border: Border.all(color: Colors.white, width: 3),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.35), blurRadius: 8, offset: const Offset(0, 4))],
+            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.35), blurRadius: 8, offset: const Offset(0, 4))],
           ),
           child: Image.asset('lib/images/kafelo_logo.png', color: Colors.white),
         ),

@@ -30,12 +30,12 @@ class ChooseAccountTypePage extends StatelessWidget {
           Positioned(
             top: -60,
             right: -50,
-            child: _SoftBlob(size: 220, color: AppColors.primaryBrown.withOpacity(0.08)),
+            child: _SoftBlob(size: 220, color: AppColors.primaryBrown.withValues(alpha: 0.08)),
           ),
           Positioned(
             bottom: -80,
             left: -60,
-            child: _SoftBlob(size: 200, color: AppColors.primaryBrown.withOpacity(0.05)),
+            child: _SoftBlob(size: 200, color: AppColors.primaryBrown.withValues(alpha: 0.05)),
           ),
           SafeArea(
             child: Column(
@@ -71,13 +71,13 @@ class ChooseAccountTypePage extends StatelessWidget {
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               gradient: LinearGradient(
-                                colors: [AppColors.primaryBrown.withOpacity(0.9), AppColors.primaryBrown],
+                                colors: [AppColors.primaryBrown.withValues(alpha: 0.9), AppColors.primaryBrown],
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: AppColors.primaryBrown.withOpacity(0.35),
+                                  color: AppColors.primaryBrown.withValues(alpha: 0.35),
                                   blurRadius: 16,
                                   offset: const Offset(0, 6),
                                 ),
@@ -185,7 +185,7 @@ class _SoftBlob extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         gradient: RadialGradient(
-          colors: [color, color.withOpacity(0)],
+          colors: [color, color.withValues(alpha: 0)],
         ),
       ),
     );
@@ -209,7 +209,7 @@ class _RoundIconButton extends StatelessWidget {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: AppColors.inputFill,
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 6, offset: const Offset(0, 2))],
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 6, offset: const Offset(0, 2))],
         ),
         child: Icon(icon, size: 20, color: AppColors.textDark),
       ),
@@ -246,7 +246,7 @@ class _AccountTypeCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
-              color: accentColor.withOpacity(0.14),
+              color: accentColor.withValues(alpha: 0.14),
               blurRadius: 14,
               offset: const Offset(0, 6),
             ),
@@ -263,7 +263,7 @@ class _AccountTypeCard extends StatelessWidget {
                 fit: BoxFit.cover,
                 alignment: Alignment.bottomCenter,
                 errorBuilder: (context, error, stackTrace) => Container(
-                  color: accentColor.withOpacity(0.15),
+                  color: accentColor.withValues(alpha: 0.15),
                   child: Icon(Icons.person_rounded, color: accentColor, size: 32),
                 ),
               ),

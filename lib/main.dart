@@ -22,7 +22,7 @@ void main() async {
   // except image files.
   await Supabase.initialize(
     url: 'https://mltdmmpyjdnjxfdxsmyg.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1sdGRtbXB5amRuanhmZHhzbXlnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODczNjk2NTEsImV4cCI6MjEwMjk0NTY1MX0.HURPu68Oki2wvcuoOeQDYwv2kzBmgt9VjMXvUuWAKnc',
+    publishableKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1sdGRtbXB5amRuanhmZHhzbXlnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODczNjk2NTEsImV4cCI6MjEwMjk0NTY1MX0.HURPu68Oki2wvcuoOeQDYwv2kzBmgt9VjMXvUuWAKnc',
   );
 
   runApp(const MyApp());

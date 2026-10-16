@@ -176,7 +176,7 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
       await UserProfileService.update({
         'fullName': newName,
         'username': newUsername,
-        if (newPhotoUrl != null) 'photoUrl': newPhotoUrl,
+        'photoUrl': ?newPhotoUrl,
       });
 
       if (emailChanged) await user.verifyBeforeUpdateEmail(newEmail);
@@ -242,7 +242,7 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
 
     final avatar = CircleAvatar(
       radius: 44,
-      backgroundColor: AppColors.primaryBrown.withOpacity(0.15),
+      backgroundColor: AppColors.primaryBrown.withValues(alpha: 0.15),
       backgroundImage: image,
       child: image == null ? const Icon(Icons.person_rounded, color: AppColors.primaryBrown, size: 44) : null,
     );

@@ -1,6 +1,7 @@
 /// Friendly copy for Firebase Auth error codes — shared by every
 /// sign-in/sign-up page so wording stays identical everywhere and only
 /// needs updating in one place.
+library;
 
 String signInErrorMessage(String code) {
   switch (code) {

@@ -185,7 +185,7 @@ class _OwnerCoffeeFormPageState extends State<OwnerCoffeeFormPage> {
       canPop: _saved || !_hasChanges,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
-        if (await _confirmDiscard() && mounted) {
+        if (await _confirmDiscard() && context.mounted) {
           setState(() => _saved = true); // allow this pop
           Navigator.pop(context);
         }
@@ -459,7 +459,7 @@ class _AvailabilityOption extends StatelessWidget {
         duration: const Duration(milliseconds: 160),
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
-          color: selected ? color.withOpacity(0.1) : AppColors.inputFill,
+          color: selected ? color.withValues(alpha: 0.1) : AppColors.inputFill,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: selected ? color : Colors.transparent, width: 1.4),
         ),

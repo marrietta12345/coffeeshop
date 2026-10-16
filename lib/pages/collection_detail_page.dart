@@ -91,7 +91,7 @@ class CollectionDetailPage extends StatelessWidget {
                             )
                           : ListView.separated(
                               itemCount: collection.shopIds.length,
-                              separatorBuilder: (_, __) => const SizedBox(height: 12),
+                              separatorBuilder: (_, _) => const SizedBox(height: 12),
                               itemBuilder: (context, index) {
                                 final shopId = collection.shopIds[index];
                                 return ResolvedShopRow(
@@ -229,7 +229,7 @@ class _AddCafesSheetState extends State<_AddCafesSheet> {
                       }
                       return ListView.separated(
                         itemCount: shops.length,
-                        separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xFFEDEDED)),
+                        separatorBuilder: (_, _) => const Divider(height: 1, color: Color(0xFFEDEDED)),
                         itemBuilder: (context, index) {
                           final shop = shops[index];
                           final added = inCollection.contains(shop.id);
@@ -310,14 +310,15 @@ class _CollectionMenu extends StatelessWidget {
     // Grab the navigator first: once deleted, this page rebuilds without
     // this menu, so its own context goes away.
     final navigator = Navigator.of(context);
+    final navContext = navigator.context;
     try {
       await CollectionsService.deleteCollection(collection.id);
       navigator.pop();
-      if (navigator.context.mounted) {
-        showTopBanner(navigator.context, '"${collection.name}" deleted', isSuccess: true);
+      if (navContext.mounted) {
+        showTopBanner(navContext, '"${collection.name}" deleted', isSuccess: true);
       }
     } catch (_) {
-      if (context.mounted) showTopBanner(context, "Couldn't delete collection. Please try again.", isSuccess: false);
+      if (navContext.mounted) showTopBanner(navContext, "Couldn't delete collection. Please try again.", isSuccess: false);
     }
   }
 

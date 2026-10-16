@@ -30,9 +30,9 @@ class CoffeeBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
       decoration: BoxDecoration(
-        color: solid ? kind.color : kind.color.withOpacity(0.1),
+        color: solid ? kind.color : kind.color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        boxShadow: solid ? [BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 4, offset: const Offset(0, 2))] : null,
+        boxShadow: solid ? [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 4, offset: const Offset(0, 2))] : null,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

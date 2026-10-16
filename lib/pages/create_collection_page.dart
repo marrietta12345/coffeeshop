@@ -300,7 +300,7 @@ class _IconChoice extends StatelessWidget {
         width: 46,
         height: 46,
         decoration: BoxDecoration(
-          color: selected ? AppColors.primaryBrown : AppColors.primaryBrown.withOpacity(0.1),
+          color: selected ? AppColors.primaryBrown : AppColors.primaryBrown.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Icon(icon, size: 22, color: selected ? Colors.white : AppColors.primaryBrown),

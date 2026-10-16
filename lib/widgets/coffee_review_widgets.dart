@@ -93,7 +93,7 @@ class CoffeeReviewTile extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 16,
-                backgroundColor: AppColors.primaryBrown.withOpacity(0.15),
+                backgroundColor: AppColors.primaryBrown.withValues(alpha: 0.15),
                 backgroundImage: hasAvatar ? NetworkImage(review.userPhotoUrl!) : null,
                 child: hasAvatar
                     ? null
@@ -121,7 +121,7 @@ class CoffeeReviewTile extends StatelessWidget {
                           const SizedBox(width: 6),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                            decoration: BoxDecoration(color: AppColors.primaryBrown.withOpacity(0.12), borderRadius: BorderRadius.circular(8)),
+                            decoration: BoxDecoration(color: AppColors.primaryBrown.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
                             child: const Text('You', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: AppColors.primaryBrown)),
                           ),
                         ],
@@ -151,7 +151,7 @@ class CoffeeReviewTile extends StatelessWidget {
                   fallback: Container(
                     width: 72,
                     height: 72,
-                    color: AppColors.primaryBrown.withOpacity(0.12),
+                    color: AppColors.primaryBrown.withValues(alpha: 0.12),
                     child: const Icon(Icons.image_outlined, color: AppColors.primaryBrown, size: 20),
                   ),
                 ),
@@ -189,7 +189,7 @@ class ShopReplyLogo extends StatelessWidget {
     final fallback = Container(
       width: size,
       height: size,
-      decoration: BoxDecoration(color: AppColors.primaryBrown.withOpacity(0.12), shape: BoxShape.circle),
+      decoration: BoxDecoration(color: AppColors.primaryBrown.withValues(alpha: 0.12), shape: BoxShape.circle),
       child: Icon(Icons.storefront_rounded, size: size * 0.65, color: AppColors.primaryBrown),
     );
     final url = logoUrl?.trim() ?? '';

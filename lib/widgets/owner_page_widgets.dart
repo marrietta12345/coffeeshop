@@ -55,7 +55,7 @@ class OwnerEmptyState extends StatelessWidget {
           Container(
             width: 64,
             height: 64,
-            decoration: BoxDecoration(color: AppColors.primaryBrown.withOpacity(0.1), shape: BoxShape.circle),
+            decoration: BoxDecoration(color: AppColors.primaryBrown.withValues(alpha: 0.1), shape: BoxShape.circle),
             child: Icon(icon, size: 30, color: AppColors.primaryBrown),
           ),
           const SizedBox(height: 14),
@@ -189,7 +189,7 @@ class AvailabilityBadge extends StatelessWidget {
     final color = available ? const Color(0xFF2E9E5B) : const Color(0xFFD64545);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -215,7 +215,7 @@ class CoffeeCategoryTag extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(color: AppColors.primaryBrown.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
+      decoration: BoxDecoration(color: AppColors.primaryBrown.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
       child: Text(category, style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: AppColors.primaryBrown)),
     );
   }

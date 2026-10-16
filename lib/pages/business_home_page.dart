@@ -35,7 +35,7 @@ class BusinessHomePage extends StatelessWidget {
                 style: const TextStyle(color: Colors.white70, fontSize: 15),
               ),
               const Spacer(),
-              Icon(Icons.storefront_rounded, color: AppColors.primaryBrown.withOpacity(0.4), size: 72),
+              Icon(Icons.storefront_rounded, color: AppColors.primaryBrown.withValues(alpha: 0.4), size: 72),
               const SizedBox(height: 16),
               const Text(
                 'Your shop dashboard is coming soon',

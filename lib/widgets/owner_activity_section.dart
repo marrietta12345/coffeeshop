@@ -128,7 +128,7 @@ class OwnerActivitySectionState extends State<OwnerActivitySection> {
               return _card(
                 child: Column(
                   children: [
-                    Icon(Icons.rate_review_outlined, size: 32, color: AppColors.textGrey.withOpacity(0.4)),
+                    Icon(Icons.rate_review_outlined, size: 32, color: AppColors.textGrey.withValues(alpha: 0.4)),
                     const SizedBox(height: 10),
                     const Text('No reviews yet', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: AppColors.textDark)),
                     const SizedBox(height: 4),
@@ -245,7 +245,7 @@ class _ActivityTile extends StatelessWidget {
             Container(
               width: 34,
               height: 34,
-              decoration: BoxDecoration(color: color.withOpacity(0.12), shape: BoxShape.circle),
+              decoration: BoxDecoration(color: color.withValues(alpha: 0.12), shape: BoxShape.circle),
               child: Icon(icon, size: 18, color: color),
             ),
             const SizedBox(width: 10),
@@ -311,7 +311,7 @@ class _ReviewPreviewRow extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 16,
-            backgroundColor: AppColors.primaryBrown.withOpacity(0.15),
+            backgroundColor: AppColors.primaryBrown.withValues(alpha: 0.15),
             backgroundImage: hasAvatar ? NetworkImage(review.userPhotoUrl!) : null,
             child: hasAvatar
                 ? null

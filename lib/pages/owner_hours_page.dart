@@ -79,7 +79,7 @@ class _OwnerHoursPageState extends State<OwnerHoursPage> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                     decoration: BoxDecoration(
-                      color: AppColors.primaryBrown.withOpacity(0.06),
+                      color: AppColors.primaryBrown.withValues(alpha: 0.06),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Column(

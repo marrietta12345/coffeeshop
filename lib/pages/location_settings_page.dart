@@ -161,7 +161,7 @@ class _LocationSettingsPageState extends State<LocationSettingsPage> with Widget
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppColors.primaryBrown.withOpacity(0.08),
+              color: AppColors.primaryBrown.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(14),
             ),
             child: const Row(

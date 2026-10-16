@@ -129,7 +129,7 @@ class _OwnerGalleryPageState extends State<OwnerGalleryPage> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.photo_library_outlined, size: 48, color: AppColors.textGrey.withOpacity(0.5)),
+                            Icon(Icons.photo_library_outlined, size: 48, color: AppColors.textGrey.withValues(alpha: 0.5)),
                             const SizedBox(height: 12),
                             const Text('No photos yet', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
                             const SizedBox(height: 4),
@@ -164,7 +164,7 @@ class _OwnerGalleryPageState extends State<OwnerGalleryPage> {
                               width: double.infinity,
                               height: double.infinity,
                               fallback: Container(
-                                color: AppColors.primaryBrown.withOpacity(0.15),
+                                color: AppColors.primaryBrown.withValues(alpha: 0.15),
                                 child: const Center(child: Icon(Icons.broken_image_outlined, color: AppColors.primaryBrown)),
                               ),
                             ),

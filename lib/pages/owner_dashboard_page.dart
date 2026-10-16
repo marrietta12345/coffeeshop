@@ -70,7 +70,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
                   children: [
                     CircleAvatar(
                       radius: 22,
-                      backgroundColor: AppColors.primaryBrown.withOpacity(0.15),
+                      backgroundColor: AppColors.primaryBrown.withValues(alpha: 0.15),
                       child: const Icon(Icons.person_rounded, color: AppColors.primaryBrown),
                     ),
                     const SizedBox(width: 12),
@@ -88,7 +88,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
                       width: 42,
                       height: 42,
                       decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white, boxShadow: [
-                        BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 8),
+                        BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 8),
                       ]),
                       child: const Icon(Icons.notifications_none_rounded, color: AppColors.textDark, size: 20),
                     ),
@@ -109,7 +109,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
                       const SizedBox(height: 2),
                       Text(
                         'All-time',
-                        style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 12),
+                        style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 12),
                       ),
                       const SizedBox(height: 18),
                       Row(
@@ -148,7 +148,7 @@ class _StatColumn extends StatelessWidget {
         children: [
           Text(value, style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800)),
           const SizedBox(height: 2),
-          Text(label, style: TextStyle(color: Colors.white.withOpacity(0.75), fontSize: 11.5)),
+          Text(label, style: TextStyle(color: Colors.white.withValues(alpha: 0.75), fontSize: 11.5)),
         ],
       ),
     );

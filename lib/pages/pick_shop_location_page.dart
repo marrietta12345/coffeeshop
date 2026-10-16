@@ -104,7 +104,7 @@ class _PickShopLocationPageState extends State<PickShopLocationPage> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(20),
-                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.12), blurRadius: 10)],
+                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 10)],
                     ),
                     child: const Text(
                       'Drag the map to place your pin',
@@ -188,7 +188,7 @@ class _CenterPin extends StatelessWidget {
             shape: BoxShape.circle,
             color: AppColors.primaryBrown,
             border: Border.all(color: Colors.white, width: 3),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.35), blurRadius: 8, offset: const Offset(0, 3))],
+            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.35), blurRadius: 8, offset: const Offset(0, 3))],
           ),
           child: Image.asset(
             'lib/images/kafelo_logo.png',
@@ -205,7 +205,7 @@ class _CenterPin extends StatelessWidget {
           height: 8,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: Colors.black.withOpacity(0.25),
+            color: Colors.black.withValues(alpha: 0.25),
           ),
         ),
       ],
@@ -230,7 +230,7 @@ class _RoundIconButton extends StatelessWidget {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: Colors.white,
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.12), blurRadius: 10)],
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 10)],
         ),
         child: Icon(icon, size: 20, color: AppColors.textDark),
       ),

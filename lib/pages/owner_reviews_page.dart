@@ -460,7 +460,7 @@ class _OwnerReviewCard extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 18,
-                backgroundColor: AppColors.primaryBrown.withOpacity(0.15),
+                backgroundColor: AppColors.primaryBrown.withValues(alpha: 0.15),
                 backgroundImage: hasAvatar ? NetworkImage(review.userPhotoUrl!) : null,
                 child: hasAvatar
                     ? null
@@ -512,7 +512,7 @@ class _OwnerReviewCard extends StatelessWidget {
                   fallback: Container(
                     width: 120,
                     height: 120,
-                    color: AppColors.primaryBrown.withOpacity(0.12),
+                    color: AppColors.primaryBrown.withValues(alpha: 0.12),
                     child: const Icon(Icons.image_outlined, color: AppColors.primaryBrown),
                   ),
                 ),
@@ -585,7 +585,7 @@ class _OwnerReviewCard extends StatelessWidget {
                   label: const Text('Reply'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.primaryBrown,
-                    side: BorderSide(color: AppColors.primaryBrown.withOpacity(0.5)),
+                    side: BorderSide(color: AppColors.primaryBrown.withValues(alpha: 0.5)),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                     visualDensity: VisualDensity.compact,
                     textStyle: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
@@ -616,7 +616,7 @@ class _HeartButton extends StatelessWidget {
         duration: const Duration(milliseconds: 160),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         decoration: BoxDecoration(
-          color: hearted ? red.withOpacity(0.1) : ownerPageBackground,
+          color: hearted ? red.withValues(alpha: 0.1) : ownerPageBackground,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Row(

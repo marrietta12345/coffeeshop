@@ -69,7 +69,7 @@ class SavedShopsPage extends StatelessWidget {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.favorite_border_rounded, size: 48, color: AppColors.textGrey.withOpacity(0.5)),
+                            Icon(Icons.favorite_border_rounded, size: 48, color: AppColors.textGrey.withValues(alpha: 0.5)),
                             const SizedBox(height: 12),
                             const Text(
                               'No saved shops yet',
@@ -87,7 +87,7 @@ class SavedShopsPage extends StatelessWidget {
 
                     return ListView.separated(
                       itemCount: savedIds.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      separatorBuilder: (_, _) => const SizedBox(height: 12),
                       itemBuilder: (context, index) {
                         final shopId = savedIds.elementAt(index);
                         return FutureBuilder<CoffeeShop?>(

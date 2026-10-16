@@ -29,7 +29,7 @@ class GalleryTile extends StatelessWidget {
               BlurFilledPhoto(url: url),
               if (moreLabel != null)
                 ColoredBox(
-                  color: Colors.black.withOpacity(0.45),
+                  color: Colors.black.withValues(alpha: 0.45),
                   child: Center(
                     child: Text(moreLabel!, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800)),
                   ),
@@ -51,25 +51,25 @@ class BlurFilledPhoto extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final failed = Container(
-      color: AppColors.primaryBrown.withOpacity(0.1),
+      color: AppColors.primaryBrown.withValues(alpha: 0.1),
       child: const Center(child: Icon(Icons.broken_image_outlined, color: AppColors.primaryBrown)),
     );
     return Stack(
       fit: StackFit.expand,
       children: [
-        ColoredBox(color: AppColors.primaryBrown.withOpacity(0.08)),
+        ColoredBox(color: AppColors.primaryBrown.withValues(alpha: 0.08)),
         ImageFiltered(
           imageFilter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-          child: Image.network(url, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const SizedBox.shrink()),
+          child: Image.network(url, fit: BoxFit.cover, errorBuilder: (_, _, _) => const SizedBox.shrink()),
         ),
-        ColoredBox(color: Colors.black.withOpacity(0.06)),
+        ColoredBox(color: Colors.black.withValues(alpha: 0.06)),
         Image.network(
           url,
           fit: BoxFit.contain,
           loadingBuilder: (context, child, progress) => progress == null
               ? child
               : const Center(child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))),
-          errorBuilder: (_, __, ___) => failed,
+          errorBuilder: (_, _, _) => failed,
         ),
       ],
     );
@@ -83,8 +83,8 @@ Future<void> openPhotoViewer(BuildContext context, List<String> urls, {int initi
     opaque: false,
     barrierColor: Colors.black,
     transitionDuration: const Duration(milliseconds: 220),
-    pageBuilder: (_, __, ___) => PhotoViewerPage(urls: urls, initialIndex: initialIndex),
-    transitionsBuilder: (_, animation, __, child) => FadeTransition(opacity: animation, child: child),
+    pageBuilder: (_, _, _) => PhotoViewerPage(urls: urls, initialIndex: initialIndex),
+    transitionsBuilder: (_, animation, _, child) => FadeTransition(opacity: animation, child: child),
   ));
 }
 
@@ -152,7 +152,7 @@ class _PhotoViewerPageState extends State<PhotoViewerPage> {
                         loadingBuilder: (context, child, progress) => progress == null
                             ? child
                             : const Center(child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white)),
-                        errorBuilder: (_, __, ___) => const Icon(Icons.broken_image_outlined, color: Colors.white54, size: 40),
+                        errorBuilder: (_, _, _) => const Icon(Icons.broken_image_outlined, color: Colors.white54, size: 40),
                       ),
                     ),
                   ),
@@ -167,7 +167,7 @@ class _PhotoViewerPageState extends State<PhotoViewerPage> {
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                   itemCount: urls.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 8),
+                  separatorBuilder: (_, _) => const SizedBox(width: 8),
                   itemBuilder: (context, i) => GestureDetector(
                     onTap: () => _goTo(i),
                     child: AnimatedContainer(
@@ -183,7 +183,7 @@ class _PhotoViewerPageState extends State<PhotoViewerPage> {
                           opacity: i == _index ? 1 : 0.55,
                           child: ColoredBox(
                             color: Colors.white12,
-                            child: Image.network(urls[i], fit: BoxFit.contain, errorBuilder: (_, __, ___) => const SizedBox.shrink()),
+                            child: Image.network(urls[i], fit: BoxFit.contain, errorBuilder: (_, _, _) => const SizedBox.shrink()),
                           ),
                         ),
                       ),

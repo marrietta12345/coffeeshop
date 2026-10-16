@@ -51,7 +51,7 @@ class OwnerShopProfilePage extends StatelessWidget {
       await FirebaseFirestore.instance.collection('shops').doc(shop.id).set({
         'latitude': result.latitude,
         'longitude': result.longitude,
-        if (newAddress != null) 'address': newAddress,
+        'address': ?newAddress,
       }, SetOptions(merge: true));
       if (context.mounted) showTopBanner(context, 'Location updated!', isSuccess: true);
     } catch (e) {
@@ -305,7 +305,7 @@ class _WhitePillButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 6, offset: const Offset(0, 2))],
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 6, offset: const Offset(0, 2))],
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -406,7 +406,7 @@ class _ShopLogoAvatarState extends State<_ShopLogoAvatar> {
             padding: const EdgeInsets.all(4),
             decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white),
             child: Container(
-              decoration: BoxDecoration(shape: BoxShape.circle, color: AppColors.primaryBrown.withOpacity(0.1)),
+              decoration: BoxDecoration(shape: BoxShape.circle, color: AppColors.primaryBrown.withValues(alpha: 0.1)),
               clipBehavior: Clip.antiAlias,
               child: _isUploading
                   ? const Center(child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.primaryBrown))

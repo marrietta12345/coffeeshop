@@ -150,7 +150,7 @@ class _AddReviewPageState extends State<AddReviewPage> {
                             width: 46,
                             height: 46,
                             decoration: BoxDecoration(
-                              color: AppColors.primaryBrown.withOpacity(0.12),
+                              color: AppColors.primaryBrown.withValues(alpha: 0.12),
                               shape: BoxShape.circle,
                             ),
                             child: Padding(
@@ -238,7 +238,7 @@ class _AddReviewPageState extends State<AddReviewPage> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
                           decoration: BoxDecoration(
-                            color: _photoAttached ? AppColors.primaryBrown.withOpacity(0.1) : AppColors.inputFill,
+                            color: _photoAttached ? AppColors.primaryBrown.withValues(alpha: 0.1) : AppColors.inputFill,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color: _photoAttached ? AppColors.primaryBrown : Colors.transparent,
@@ -279,7 +279,7 @@ class _AddReviewPageState extends State<AddReviewPage> {
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primaryBrown,
-                            disabledBackgroundColor: AppColors.primaryBrown.withOpacity(0.35),
+                            disabledBackgroundColor: AppColors.primaryBrown.withValues(alpha: 0.35),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
                           onPressed: canSubmit && !_isPosting ? _submit : null,

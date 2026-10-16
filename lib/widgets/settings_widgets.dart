@@ -22,7 +22,7 @@ class ProfileMenuTile extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.06),
+          color: Colors.white.withValues(alpha: 0.06),
           borderRadius: BorderRadius.circular(14),
         ),
         child: Row(
@@ -79,7 +79,7 @@ class SettingsPageScaffold extends StatelessWidget {
                       style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
                     ),
                   ),
-                  if (action != null) action!,
+                  ?action,
                 ],
               ),
             ),
@@ -198,7 +198,7 @@ class SettingsEmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 48, color: AppColors.textGrey.withOpacity(0.5)),
+            Icon(icon, size: 48, color: AppColors.textGrey.withValues(alpha: 0.5)),
             const SizedBox(height: 12),
             Text(
               title,

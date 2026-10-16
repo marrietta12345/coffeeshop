@@ -143,7 +143,7 @@ class _MyReviewsPageState extends State<MyReviewsPage> {
                 return ListView.separated(
                   padding: const EdgeInsets.only(bottom: 12),
                   itemCount: reviews.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  separatorBuilder: (_, _) => const SizedBox(height: 12),
                   itemBuilder: (context, index) {
                     final review = reviews[index];
                     return FutureBuilder<CoffeeShop?>(

@@ -15,7 +15,7 @@ class VibeMatchPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.primaryBrown.withOpacity(0.12),
+      color: AppColors.primaryBrown.withValues(alpha: 0.12),
       borderRadius: BorderRadius.circular(20),
       child: InkWell(
         onTap: onTap,
@@ -106,7 +106,7 @@ Future<void> showVibeMatchSheet(
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.primaryBrown,
                   minimumSize: const Size.fromHeight(46),
-                  side: BorderSide(color: AppColors.primaryBrown.withOpacity(0.5)),
+                  side: BorderSide(color: AppColors.primaryBrown.withValues(alpha: 0.5)),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   textStyle: const TextStyle(fontWeight: FontWeight.w700),
                 ),
@@ -130,7 +130,7 @@ class _MatchChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFF2E9E5B).withOpacity(0.1),
+        color: const Color(0xFF2E9E5B).withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -191,7 +191,7 @@ class CafeVibeTags extends StatelessWidget {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: tags.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 6),
+        separatorBuilder: (_, _) => const SizedBox(width: 6),
         itemBuilder: (context, i) {
           final (icon, label) = tags[i];
           return Container(

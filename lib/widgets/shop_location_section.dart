@@ -566,13 +566,13 @@ class _GpsCard extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
-            color: location != null ? AppColors.primaryBrown.withOpacity(0.08) : AppColors.inputFill,
+            color: location != null ? AppColors.primaryBrown.withValues(alpha: 0.08) : AppColors.inputFill,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: missing
                   ? errorColor
                   : location != null
-                      ? AppColors.primaryBrown.withOpacity(0.4)
+                      ? AppColors.primaryBrown.withValues(alpha: 0.4)
                       : Colors.transparent,
             ),
           ),
@@ -629,7 +629,7 @@ class _GpsCard extends StatelessWidget {
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size.fromHeight(48),
                   padding: const EdgeInsets.symmetric(horizontal: 8),
-                  side: BorderSide(color: AppColors.primaryBrown.withOpacity(0.5)),
+                  side: BorderSide(color: AppColors.primaryBrown.withValues(alpha: 0.5)),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 onPressed: locating ? null : onPickOnMap,

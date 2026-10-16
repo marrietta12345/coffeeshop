@@ -62,7 +62,7 @@ class YouPage extends StatelessWidget {
                       height: 40,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: Colors.white.withOpacity(0.06),
+                        color: Colors.white.withValues(alpha: 0.06),
                       ),
                       child: const Icon(Icons.settings_outlined, color: Colors.white70, size: 20),
                     ),
@@ -74,7 +74,7 @@ class YouPage extends StatelessWidget {
                 children: [
                   CircleAvatar(
                     radius: 32,
-                    backgroundColor: AppColors.primaryBrown.withOpacity(0.2),
+                    backgroundColor: AppColors.primaryBrown.withValues(alpha: 0.2),
                     backgroundImage: hasPhoto ? NetworkImage(photoUrl) : null,
                     child: hasPhoto ? null : const Icon(Icons.person_rounded, color: AppColors.primaryBrown, size: 32),
                   ),

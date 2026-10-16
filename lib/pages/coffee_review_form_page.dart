@@ -216,7 +216,7 @@ class _CoffeeReviewFormPageState extends State<CoffeeReviewFormPage> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
                           decoration: BoxDecoration(
-                            color: _photoAttached ? AppColors.primaryBrown.withOpacity(0.1) : AppColors.inputFill,
+                            color: _photoAttached ? AppColors.primaryBrown.withValues(alpha: 0.1) : AppColors.inputFill,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: _photoAttached ? AppColors.primaryBrown : Colors.transparent),
                           ),
@@ -274,7 +274,7 @@ class _CoffeeReviewFormPageState extends State<CoffeeReviewFormPage> {
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primaryBrown,
-                            disabledBackgroundColor: AppColors.primaryBrown.withOpacity(0.35),
+                            disabledBackgroundColor: AppColors.primaryBrown.withValues(alpha: 0.35),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
                           onPressed: _busy ? null : _submit,
@@ -311,7 +311,7 @@ class _CoffeeReviewFormPageState extends State<CoffeeReviewFormPage> {
   Widget _cupTile() => Container(
         width: 44,
         height: 44,
-        color: AppColors.primaryBrown.withOpacity(0.12),
+        color: AppColors.primaryBrown.withValues(alpha: 0.12),
         child: const Icon(Icons.local_cafe_rounded, color: AppColors.primaryBrown, size: 22),
       );
 }

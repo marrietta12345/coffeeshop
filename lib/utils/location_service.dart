@@ -11,13 +11,11 @@ class LocationResult {
   final LatLng? position;
   final String? errorMessage;
 
-  const LocationResult.success(LatLng position)
-      : position = position,
-        errorMessage = null;
+  const LocationResult.success(LatLng this.position)
+      : errorMessage = null;
 
-  const LocationResult.failure(String errorMessage)
-      : position = null,
-        errorMessage = errorMessage;
+  const LocationResult.failure(String this.errorMessage)
+      : position = null;
 
   bool get isSuccess => position != null;
 }

@@ -344,7 +344,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin, Widg
             initialZoom: 14.5,
             minZoom: 4,
             maxZoom: 19,
-            onTap: (_, __) => _hideSuggestions(),
+            onTap: (_, _) => _hideSuggestions(),
             interactionOptions: const InteractionOptions(
               flags: InteractiveFlag.pinchZoom |
                   InteractiveFlag.drag |
@@ -436,7 +436,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin, Widg
                 topRight: Radius.circular(24),
               ),
               boxShadow: [
-                BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 20, offset: const Offset(0, -6)),
+                BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 20, offset: const Offset(0, -6)),
               ],
             ),
             child: Column(
@@ -497,7 +497,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin, Widg
                               : ListView.separated(
                                   scrollDirection: Axis.horizontal,
                                   itemCount: _nearbyShops.length,
-                                  separatorBuilder: (_, __) => const SizedBox(width: 12),
+                                  separatorBuilder: (_, _) => const SizedBox(width: 12),
                                   itemBuilder: (context, index) {
                                     final shop = _nearbyShops[index];
                                     final distance = formatDistance(_userLocation, LatLng(shop.latitude, shop.longitude));
@@ -618,7 +618,7 @@ class _UserLocationDot extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: const Color(0xFF4285F4).withOpacity(0.2),
+        color: const Color(0xFF4285F4).withValues(alpha: 0.2),
       ),
       child: Center(
         child: Container(
@@ -628,7 +628,7 @@ class _UserLocationDot extends StatelessWidget {
             shape: BoxShape.circle,
             color: const Color(0xFF4285F4),
             border: Border.all(color: Colors.white, width: 2.5),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 4)],
+            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 4)],
           ),
         ),
       ),
@@ -712,7 +712,7 @@ class _ShopPin extends StatelessWidget {
                       child: DecoratedBox(
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: AppColors.primaryBrown.withOpacity(0.45 * (1 - t)),
+                          color: AppColors.primaryBrown.withValues(alpha: 0.45 * (1 - t)),
                         ),
                       ),
                     );
@@ -745,7 +745,7 @@ class _ShopPin extends StatelessWidget {
             border: Border.all(color: Colors.white, width: 3),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.35),
+                color: Colors.black.withValues(alpha: 0.35),
                 blurRadius: 8,
                 offset: const Offset(0, 4),
               ),
@@ -783,8 +783,8 @@ class _SearchSuggestionsCard extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 20, offset: const Offset(0, 8)),
-          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 4, offset: const Offset(0, 1)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 20, offset: const Offset(0, 8)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 4, offset: const Offset(0, 1)),
         ],
       ),
       clipBehavior: Clip.antiAlias,
@@ -811,7 +811,7 @@ class _SearchSuggestionsCard extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 6),
                 keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                 itemCount: shops.length,
-                separatorBuilder: (_, __) => const Divider(height: 1, indent: 70, color: Color(0xFFF0EDEA)),
+                separatorBuilder: (_, _) => const Divider(height: 1, indent: 70, color: Color(0xFFF0EDEA)),
                 itemBuilder: (context, index) {
                   final shop = shops[index];
                   final location = userLocation;

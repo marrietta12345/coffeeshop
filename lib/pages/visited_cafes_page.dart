@@ -120,7 +120,7 @@ class _VisitedCafesPageState extends State<VisitedCafesPage> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
-                            color: AppColors.primaryBrown.withOpacity(0.12),
+                            color: AppColors.primaryBrown.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
@@ -211,7 +211,7 @@ class _DiscoveredCard extends StatelessWidget {
           colors: [AppColors.primaryBrown, Color(0xFF5C3D2A)],
         ),
         boxShadow: [
-          BoxShadow(color: AppColors.primaryBrown.withOpacity(0.3), blurRadius: 18, offset: const Offset(0, 8)),
+          BoxShadow(color: AppColors.primaryBrown.withValues(alpha: 0.3), blurRadius: 18, offset: const Offset(0, 8)),
         ],
       ),
       child: Column(
@@ -276,7 +276,7 @@ class _MiniStat extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(color: Colors.white.withOpacity(0.16), borderRadius: BorderRadius.circular(20)),
+      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.16), borderRadius: BorderRadius.circular(20)),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -313,7 +313,7 @@ class _DailyDiscoveryTile extends StatelessWidget {
 
     return _Tile(
       background: _cream,
-      borderColor: AppColors.primaryBrown.withOpacity(0.18),
+      borderColor: AppColors.primaryBrown.withValues(alpha: 0.18),
       top: SizedBox(
         width: 40,
         height: 40,
@@ -324,7 +324,7 @@ class _DailyDiscoveryTile extends StatelessWidget {
               value: done ? 1 : 0,
               strokeWidth: 5,
               strokeCap: StrokeCap.round,
-              backgroundColor: AppColors.primaryBrown.withOpacity(0.15),
+              backgroundColor: AppColors.primaryBrown.withValues(alpha: 0.15),
               valueColor: const AlwaysStoppedAnimation(AppColors.primaryBrown),
             ),
             Center(

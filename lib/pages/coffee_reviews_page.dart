@@ -202,7 +202,7 @@ class _WriteButton extends StatelessWidget {
         label: Text(isEdit ? 'Edit Review' : 'Write a Review'),
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.primaryBrown,
-          side: BorderSide(color: AppColors.primaryBrown.withOpacity(0.5)),
+          side: BorderSide(color: AppColors.primaryBrown.withValues(alpha: 0.5)),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           textStyle: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
         ),

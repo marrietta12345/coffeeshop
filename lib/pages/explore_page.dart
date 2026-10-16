@@ -350,7 +350,7 @@ class _ExplorePageState extends State<ExplorePage> with WidgetsBindingObserver {
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: shops.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            separatorBuilder: (_, _) => const SizedBox(width: 12),
             itemBuilder: (context, index) {
               final shop = shops[index];
               final distance = formatDistance(_userLocation, LatLng(shop.latitude, shop.longitude));
@@ -523,8 +523,8 @@ class _SearchSuggestionsCard extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 20, offset: const Offset(0, 8)),
-          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 4, offset: const Offset(0, 1)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 20, offset: const Offset(0, 8)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 4, offset: const Offset(0, 1)),
         ],
       ),
       clipBehavior: Clip.antiAlias,
@@ -604,7 +604,7 @@ class _SearchSuggestionsCard extends StatelessWidget {
                   : Container(
                       width: 52,
                       height: 39,
-                      color: AppColors.primaryBrown.withOpacity(0.12),
+                      color: AppColors.primaryBrown.withValues(alpha: 0.12),
                       child: Icon(info?.$1 ?? Icons.search_rounded, color: AppColors.primaryBrown, size: 22),
                     ),
             ),

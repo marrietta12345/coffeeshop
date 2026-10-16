@@ -405,7 +405,7 @@ class _ShopHeader extends StatelessWidget {
                 padding: const EdgeInsets.all(4),
                 decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white),
                 child: Container(
-                  decoration: BoxDecoration(shape: BoxShape.circle, color: AppColors.primaryBrown.withOpacity(0.1)),
+                  decoration: BoxDecoration(shape: BoxShape.circle, color: AppColors.primaryBrown.withValues(alpha: 0.1)),
                   clipBehavior: Clip.antiAlias,
                   child: (shop.logoUrl != null && shop.logoUrl!.isNotEmpty)
                       ? Image.network(
@@ -598,7 +598,7 @@ class _RoundIconButton extends StatelessWidget {
           shape: BoxShape.circle,
           color: whiteBg ? Colors.white : AppColors.inputFill,
           boxShadow: whiteBg
-              ? [BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 6, offset: const Offset(0, 2))]
+              ? [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 6, offset: const Offset(0, 2))]
               : null,
         ),
         child: Icon(icon, size: 20, color: AppColors.textDark),
@@ -682,7 +682,7 @@ class _OverviewTab extends StatelessWidget {
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: menuItems.length.clamp(0, 4),
-            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            separatorBuilder: (_, _) => const SizedBox(width: 8),
             itemBuilder: (context, index) => ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: MenuItemImage(item: menuItems[index], shop: shop, fallbackIndex: index, width: 76, height: 76),
@@ -851,7 +851,7 @@ class _ReviewCard extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 16,
-                backgroundColor: AppColors.primaryBrown.withOpacity(0.15),
+                backgroundColor: AppColors.primaryBrown.withValues(alpha: 0.15),
                 child: Text(
                   review.userName.isNotEmpty ? review.userName[0].toUpperCase() : '?',
                   style: const TextStyle(color: AppColors.primaryBrown, fontWeight: FontWeight.w700, fontSize: 13),
@@ -894,7 +894,7 @@ class _ReviewCard extends StatelessWidget {
                   fallback: Container(
                     width: 60,
                     height: 60,
-                    color: AppColors.primaryBrown.withOpacity(0.15),
+                    color: AppColors.primaryBrown.withValues(alpha: 0.15),
                     child: const Icon(Icons.image_outlined, color: AppColors.primaryBrown, size: 20),
                   ),
                 ),
@@ -1007,7 +1007,7 @@ class _MenuTabState extends State<_MenuTab> {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: items.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 14),
+        separatorBuilder: (_, _) => const SizedBox(width: 14),
         itemBuilder: (context, index) => SizedBox(width: 140, child: _card(items[index], isTopPick: topLiked.contains(items[index]))),
       ),
     );
@@ -1283,7 +1283,7 @@ class _PhotoTab extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.photo_library_outlined, size: 48, color: AppColors.textGrey.withOpacity(0.5)),
+              Icon(Icons.photo_library_outlined, size: 48, color: AppColors.textGrey.withValues(alpha: 0.5)),
               const SizedBox(height: 12),
               const Text(
                 'No photos available yet.',

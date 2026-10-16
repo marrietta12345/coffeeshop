@@ -262,7 +262,7 @@ class _CoffeeCard extends StatelessWidget {
                 child: FittedBox(
                   child: Switch(
                     value: item.available,
-                    activeColor: Colors.white,
+                    activeThumbColor: Colors.white,
                     activeTrackColor: const Color(0xFF2E9E5B),
                     onChanged: busy ? null : onAvailableChanged,
                   ),

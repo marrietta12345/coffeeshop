@@ -60,7 +60,7 @@ class ShopLogoImage extends StatelessWidget {
         child: Image.network(
           logo,
           fit: BoxFit.contain,
-          errorBuilder: (_, __, ___) => placeholder,
+          errorBuilder: (_, _, _) => placeholder,
         ),
       );
     }
@@ -141,7 +141,7 @@ class ShopBanner extends StatelessWidget {
       height: height,
       fit: BoxFit.cover,
       loadingBuilder: (context, child, progress) =>
-          progress == null ? child : Container(width: width, height: height, color: AppColors.primaryBrown.withOpacity(0.08)),
+          progress == null ? child : Container(width: width, height: height, color: AppColors.primaryBrown.withValues(alpha: 0.08)),
       errorBuilder: (context, error, stackTrace) => placeholder,
     );
   }
@@ -161,13 +161,13 @@ class _NoPhotoPlaceholder extends StatelessWidget {
     return Container(
       width: width,
       height: height,
-      color: AppColors.primaryBrown.withOpacity(0.08),
+      color: AppColors.primaryBrown.withValues(alpha: 0.08),
       child: Center(
         child: Padding(
           padding: EdgeInsets.all((width.isFinite ? width : 80) * 0.28),
           child: Image.asset(
             'lib/images/kafelo_logo.png',
-            color: AppColors.primaryBrown.withOpacity(0.4),
+            color: AppColors.primaryBrown.withValues(alpha: 0.4),
           ),
         ),
       ),

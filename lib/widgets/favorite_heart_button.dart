@@ -30,10 +30,12 @@ class _FavoriteHeartButtonState extends State<FavoriteHeartButton> {
 
   Future<void> _loadInitialState() async {
     final saved = await SavedShopsService.isSaved(widget.shop.id);
-    if (mounted) setState(() {
+    if (mounted) {
+      setState(() {
       _isSaved = saved;
       _isLoading = false;
     });
+    }
   }
 
   Future<void> _toggle() async {
@@ -75,7 +77,7 @@ class _FavoriteHeartButtonState extends State<FavoriteHeartButton> {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: Colors.white,
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 6, offset: const Offset(0, 2))],
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 6, offset: const Offset(0, 2))],
         ),
         child: _isLoading
             ? Padding(

@@ -46,7 +46,7 @@ class BestSellersPage extends StatelessWidget {
                   : ListView.separated(
                       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
                       itemCount: sorted.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      separatorBuilder: (_, _) => const SizedBox(height: 12),
                       itemBuilder: (context, index) => _BestSellerListItem(
                         rank: index + 1,
                         item: sorted[index],

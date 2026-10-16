@@ -145,7 +145,7 @@ class _CoffeeDetailPageState extends State<CoffeeDetailPage> {
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(color: AppColors.primaryBrown.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
+                      decoration: BoxDecoration(color: AppColors.primaryBrown.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
                       child: Text(
                         _item.category,
                         style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.primaryBrown),

@@ -147,7 +147,7 @@ class _CreateCollectionRow extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(12, 12, 8, 12),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.primaryBrown.withOpacity(0.35), width: 1.4),
+          border: Border.all(color: AppColors.primaryBrown.withValues(alpha: 0.35), width: 1.4),
         ),
         child: const Row(
           children: [
@@ -190,7 +190,7 @@ class CollectionIconTile extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: AppColors.primaryBrown.withOpacity(0.12),
+        color: AppColors.primaryBrown.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(size * 0.22),
       ),
       child: Icon(icon, color: AppColors.primaryBrown, size: size * 0.46),
