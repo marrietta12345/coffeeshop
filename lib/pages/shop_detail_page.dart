@@ -35,6 +35,7 @@ import 'best_sellers_page.dart';
 import 'coffee_detail_page.dart';
 import 'directions_page.dart';
 import '../widgets/coffee_badges.dart';
+import '../widgets/tambay_widgets.dart';
 import '../widgets/coffee_review_widgets.dart' show OwnerResponseBox;
 import '../utils/page_transitions.dart';
 
@@ -660,9 +661,11 @@ class _OverviewTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isOwnShop = shop.ownerId != null && shop.ownerId == FirebaseAuth.instance.currentUser?.uid;
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
       children: [
+        TambayCheckCard(shop: shop, canCheckIn: !isOwnShop),
         // The owner's own description — hidden when they haven't written one
         // (never placeholder or made-up text).
         if (shop.description.trim().isNotEmpty) ...[

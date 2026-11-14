@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/tambay_check_service.dart';
 import '../widgets/owner_bottom_nav.dart';
 import 'owner_dashboard_page.dart';
 import 'owner_menu_page.dart';
@@ -18,6 +19,12 @@ class OwnerMainNavPage extends StatefulWidget {
 class _OwnerMainNavPageState extends State<OwnerMainNavPage> {
   static const int _reviewsTab = 3;
   int _navIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    TambayCheckService.start(); // what customers at the café say right now
+  }
 
   @override
   Widget build(BuildContext context) {

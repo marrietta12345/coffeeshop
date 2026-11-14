@@ -19,6 +19,8 @@ rules_version = '2';
 //   shops/{shopId}/activity/{uid}    one engagement record per user per café
 //                                    (views, favorite, collection save) —
 //                                    readable only by that café's owner
+//   tambayChecks/{shopId}_{uid}      "I'm here" reports (how busy, outlets,
+//                                    Wi-Fi) — live for 2 hours in the app
 //   {path=**}/reviews, {path=**}/coffeeReviews
 //                                    collection-group reads for Profile →
 //                                    My Reviews (a user's own reviews only)
@@ -425,6 +427,33 @@ service cloud.firestore {
 
         allow delete: if false;
       }
+    }
+
+    // ------------------------------------------------------------------
+    // Tambay Check — "I'm here" reports: how busy a café is, free outlets,
+    // Wi-Fi. One per customer per café (id = shopId_uid), replaced when
+    // they check in again. Signed-in users can read them; only Coffee
+    // Explorer accounts write their own, never for their own café.
+    // ------------------------------------------------------------------
+    match /tambayChecks/{checkId} {
+      function validCheck() {
+        let data = request.resource.data;
+        return data.keys().hasOnly(['shopId', 'uid', 'busy', 'outlets', 'wifi', 'createdAt'])
+          && data.uid == request.auth.uid
+          && data.shopId is string
+          && checkId == data.shopId + '_' + request.auth.uid
+          && exists(/databases/$(database)/documents/shops/$(data.shopId))
+          && get(/databases/$(database)/documents/shops/$(data.shopId)).data.get('ownerId', '') != request.auth.uid
+          && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'customer'
+          && data.busy in ['chill', 'some', 'packed']
+          && (data.outlets == null || data.outlets is bool)
+          && (data.wifi == null || data.wifi in ['fast', 'ok', 'slow'])
+          && data.createdAt == request.time;
+      }
+
+      allow read: if signedIn();
+      allow create, update: if signedIn() && validCheck();
+      allow delete: if signedIn() && resource.data.uid == request.auth.uid;
     }
 
     // ------------------------------------------------------------------

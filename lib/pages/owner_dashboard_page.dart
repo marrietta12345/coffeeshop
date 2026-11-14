@@ -4,6 +4,7 @@ import '../theme/app_colors.dart';
 import '../models/coffee_shop.dart';
 import '../utils/owner_shop_service.dart';
 import '../widgets/owner_activity_section.dart';
+import '../widgets/owner_right_now_card.dart';
 
 /// Coffee Shop Owner's dashboard — greeting, an all-time Shop Overview
 /// (rating, total reviews, total favorites), an aggregated Activity Summary (Today / 7 Days /
@@ -122,6 +123,8 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
                     ],
                   ),
                 ),
+                const SizedBox(height: 20),
+                OwnerRightNowCard(shop: shop),
                 const SizedBox(height: 28),
                 OwnerActivitySection(key: _activityKey, shop: shop, onViewAllReviews: widget.onViewAllReviews),
               ],

@@ -4,6 +4,7 @@ import '../models/coffee_shop.dart';
 import 'shop_photo.dart';
 import 'open_status.dart';
 import 'fitted_image.dart';
+import 'tambay_widgets.dart';
 
 /// Compact card used in horizontal carousels — "Nearby Coffee Shops" on
 /// the map screen, "Popular Coffee Shops" / "Recommended for You" on
@@ -63,6 +64,8 @@ class ShopMiniCard extends StatelessWidget {
                 children: [
                   ShopLogoImage(shop: shop, width: double.infinity, height: double.infinity),
                   Positioned(top: 6, left: 6, child: OpenStatusBadge(hours: shop.hours)),
+                  // how busy people there say it is (Tambay Check)
+                  Positioned.fill(child: TambayCardBadges(shopId: shop.id)),
                   if ((matchPercent ?? 0) > 0)
                     Positioned(
                       top: 6,

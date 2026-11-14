@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../utils/map_area_focus.dart';
+import '../utils/tambay_check_service.dart';
 import '../widgets/custom_bottom_nav.dart';
 import 'home_page.dart';
 import 'explore_page.dart';
@@ -22,6 +23,7 @@ class _MainNavPageState extends State<MainNavPage> {
   void initState() {
     super.initState();
     MapAreaFocus.current.addListener(_showMapForArea);
+    TambayCheckService.start(); // live "how busy is it" reports
   }
 
   @override
