@@ -6,6 +6,9 @@ import 'pages/welcome_page.dart';
 import 'pages/sign_in_page.dart';
 import 'pages/sign_up_page.dart';
 import 'pages/main_nav_page.dart';
+import 'pages/owner_main_nav_page.dart';
+import 'utils/user_role.dart';
+import 'utils/web_session.dart';
 import 'widgets/mobile_frame.dart';
 
 void main() async {
@@ -25,11 +28,22 @@ void main() async {
     publishableKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1sdGRtbXB5amRuanhmZHhzbXlnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODczNjk2NTEsImV4cCI6MjEwMjk0NTY1MX0.HURPu68Oki2wvcuoOeQDYwv2kzBmgt9VjMXvUuWAKnc',
   );
 
-  runApp(const MyApp());
+  // Website: a page refresh keeps you on your home screen if you're
+  // still signed in. Phones always start on Welcome, as before.
+  final role = await resumedWebRole();
+  final startRoute = switch (role) {
+    UserRole.customer => '/home',
+    UserRole.owner => '/owner',
+    null => '/welcome',
+  };
+
+  runApp(MyApp(initialRoute: startRoute));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final String initialRoute;
+
+  const MyApp({super.key, this.initialRoute = '/welcome'});
 
   @override
   Widget build(BuildContext context) {
@@ -45,12 +59,13 @@ class MyApp extends StatelessWidget {
       // Mobile layout guard: capped text scaling + a phone-width column on
       // landscape phones and tablets (see MobileFrame).
       builder: (context, child) => MobileFrame(child: child ?? const SizedBox.shrink()),
-      initialRoute: '/welcome',
+      initialRoute: initialRoute,
       routes: {
         '/welcome': (context) => const WelcomePage(),
         '/signin': (context) => const SignInPage(),
         '/signup': (context) => const SignUpPage(),
         '/home': (context) => const MainNavPage(),
+        '/owner': (context) => const OwnerMainNavPage(),
       },
     );
   }

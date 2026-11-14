@@ -1,10 +1,10 @@
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/menu_item.dart';
 import '../models/review.dart';
 import 'supabase_image_service.dart';
+import 'picked_image.dart';
 
 /// Reviews of a single coffee drink — separate from the café's own
 /// reviews (ReviewService). Stored in one collection per café:
@@ -52,7 +52,7 @@ class CoffeeReviewService {
     required MenuItem coffee,
     required int rating,
     required String text,
-    File? photo,
+    PickedImage? photo,
     bool keepExistingPhoto = false,
   }) async {
     final user = FirebaseAuth.instance.currentUser;
@@ -64,7 +64,7 @@ class CoffeeReviewService {
     String? photoUrl;
     if (photo != null) {
       photoUrl = await SupabaseImageService.uploadImage(
-        file: photo,
+        image: photo,
         folder: 'reviews',
         shopId: coffee.shopId,
         fileName: 'coffee_${coffee.id}_${user.uid}_${DateTime.now().millisecondsSinceEpoch}.jpg',

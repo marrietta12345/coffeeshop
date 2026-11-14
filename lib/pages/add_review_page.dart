@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../widgets/fitted_image.dart';
@@ -7,6 +6,7 @@ import '../models/coffee_shop.dart';
 import '../models/review.dart';
 import '../utils/review_service.dart';
 import '../widgets/top_banner.dart';
+import '../utils/picked_image.dart';
 
 /// Full-page "Write a Review" flow — replaces the old bottom sheet.
 /// Styled to match the rest of the app's auth-style header (dark top +
@@ -30,7 +30,7 @@ class AddReviewPage extends StatefulWidget {
 class _AddReviewPageState extends State<AddReviewPage> {
   double _rating = 5;
   final _textController = TextEditingController();
-  File? _photo; // newly picked photo
+  PickedImage? _photo; // newly picked photo
   bool _keepExistingPhoto = false; // keep the photo from an earlier review
   bool _isPosting = false;
 
@@ -63,9 +63,11 @@ class _AddReviewPageState extends State<AddReviewPage> {
 
   Future<void> _pickPhoto() async {
     final picked = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 80, maxWidth: 1600);
-    if (picked == null || !mounted) return;
+    if (picked == null) return;
+    final photo = await PickedImage.fromXFile(picked);
+    if (!mounted) return;
     setState(() {
-      _photo = File(picked.path);
+      _photo = photo;
       _keepExistingPhoto = false;
     });
   }
@@ -310,7 +312,7 @@ class _AddReviewPageState extends State<AddReviewPage> {
 
 /// Preview of the attached photo with a small remove (×) button.
 class _PhotoPreview extends StatelessWidget {
-  final File? photo;
+  final PickedImage? photo;
   final String? photoUrl;
   final VoidCallback? onRemove;
 
@@ -320,7 +322,7 @@ class _PhotoPreview extends StatelessWidget {
   Widget build(BuildContext context) {
     // The whole photo, never cropped or stretched.
     final Widget image = photo != null
-        ? FittedImage(image: FileImage(photo!), width: double.infinity, height: 160)
+        ? FittedImage(image: photo!.provider, width: double.infinity, height: 160)
         : FittedImage.network(photoUrl ?? '', width: double.infinity, height: 160);
 
     return Stack(

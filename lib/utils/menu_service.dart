@@ -1,10 +1,10 @@
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/coffee_shop.dart';
 import '../models/menu_item.dart';
 import 'supabase_image_service.dart';
+import 'picked_image.dart';
 
 /// A coffee together with the café that serves it.
 typedef CafeCoffee = ({MenuItem item, CoffeeShop shop});
@@ -68,7 +68,7 @@ class MenuService {
     bool bestSeller = false,
     bool featured = false,
     String? currentImageUrl,
-    File? newImage,
+    PickedImage? newImage,
     bool removeImage = false,
   }) async {
     // A fixed id up front, so a retry after a failure updates the same
@@ -78,7 +78,7 @@ class MenuService {
     String? imageUrl = removeImage ? null : currentImageUrl;
     if (newImage != null) {
       imageUrl = await SupabaseImageService.uploadImage(
-        file: newImage,
+        image: newImage,
         folder: 'best-sellers',
         shopId: shopId,
         fileName: '${ref.id}_${DateTime.now().millisecondsSinceEpoch}.jpg',

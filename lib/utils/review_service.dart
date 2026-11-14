@@ -1,10 +1,10 @@
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/coffee_shop.dart';
 import '../models/review.dart';
 import 'supabase_image_service.dart';
+import 'picked_image.dart';
 
 /// Customer reviews, stored per shop at `shops/{shopId}/reviews/{uid}` —
 /// one review per user per shop, so a user can review as many different
@@ -95,7 +95,7 @@ class ReviewService {
     required CoffeeShop shop,
     required double rating,
     required String text,
-    File? photo,
+    PickedImage? photo,
     bool keepExistingPhoto = false,
   }) async {
     final user = FirebaseAuth.instance.currentUser;
@@ -110,7 +110,7 @@ class ReviewService {
     String? photoUrl;
     if (photo != null) {
       photoUrl = await SupabaseImageService.uploadImage(
-        file: photo,
+        image: photo,
         folder: 'reviews',
         shopId: shop.id,
         fileName: '${user.uid}_${DateTime.now().millisecondsSinceEpoch}.jpg',

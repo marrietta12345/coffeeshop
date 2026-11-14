@@ -207,7 +207,16 @@ class _ShopDetailPageState extends State<ShopDetailPage> {
       showTopBanner(context, 'No phone number available for this shop.', isSuccess: false);
       return;
     }
-    await launchUrl(Uri.parse('tel:$phone'));
+    bool opened;
+    try {
+      opened = await launchUrl(Uri.parse('tel:$phone'));
+    } catch (_) {
+      opened = false;
+    }
+    // Tablets, iPads and iPod touch have no phone app.
+    if (!opened && mounted) {
+      showTopBanner(context, "Calling isn't available on this device.", isSuccess: false);
+    }
   }
 
   /// Opens one of the café's website / social links in the browser or app.

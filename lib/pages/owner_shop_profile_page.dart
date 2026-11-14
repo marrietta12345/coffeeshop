@@ -1,8 +1,7 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:geocoding/geocoding.dart';
+import '../utils/address_lookup.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:image_picker/image_picker.dart';
 import '../widgets/fitted_image.dart';
@@ -19,6 +18,7 @@ import 'owner_hours_page.dart';
 import 'owner_gallery_page.dart';
 import 'pick_shop_location_page.dart';
 import 'welcome_page.dart';
+import '../utils/picked_image.dart';
 
 /// "My Coffee Shop Profile" — the owner's view of their own live shop
 /// listing, with real editing actions for profile info, location, hours,
@@ -35,14 +35,7 @@ class OwnerShopProfilePage extends StatelessWidget {
 
     String? newAddress;
     try {
-      final placemarks = await placemarkFromCoordinates(result.latitude, result.longitude).timeout(const Duration(seconds: 8));
-      if (placemarks.isNotEmpty) {
-        final p = placemarks.first;
-        final parts = [p.street, p.subLocality, p.locality, p.administrativeArea]
-            .where((part) => part != null && part.trim().isNotEmpty)
-            .toList();
-        if (parts.isNotEmpty) newAddress = parts.join(', ');
-      }
+      newAddress = await AddressLookup.addressFrom(result);
     } catch (_) {
       // Keep the existing address text if reverse geocoding fails.
     }
@@ -250,9 +243,10 @@ class _ChangeBannerButtonState extends State<_ChangeBannerButton> {
 
   Future<void> _change() async {
     final picked = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 85, maxWidth: 1920);
-    if (picked == null || !mounted) return;
-    final file = File(picked.path);
-    final use = await confirmPhoto(context, image: FileImage(file), aspectRatio: ImageRatios.banner, title: 'Use this banner?');
+    if (picked == null) return;
+    final file = await PickedImage.fromXFile(picked);
+    if (!mounted) return;
+    final use = await confirmPhoto(context, image: file.provider, aspectRatio: ImageRatios.banner, title: 'Use this banner?');
     if (!use || !mounted) return;
 
     setState(() => _busy = true);
@@ -260,7 +254,7 @@ class _ChangeBannerButtonState extends State<_ChangeBannerButton> {
     try {
       // A new file name each time, so phones don't keep showing the old one.
       final url = await SupabaseImageService.uploadImage(
-        file: file,
+        image: file,
         folder: 'banners',
         shopId: widget.shop.id,
         fileName: 'banner_${DateTime.now().millisecondsSinceEpoch}.jpg',
@@ -368,14 +362,16 @@ class _ShopLogoAvatarState extends State<_ShopLogoAvatar> {
   Future<void> _pickAndUploadLogo() async {
     final picker = ImagePicker();
     final XFile? picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 90, maxWidth: 800);
-    if (picked == null || !mounted) return;
-    final use = await confirmPhoto(context, image: FileImage(File(picked.path)), aspectRatio: ImageRatios.square, title: 'Use this logo?');
+    if (picked == null) return;
+    final logo = await PickedImage.fromXFile(picked);
+    if (!mounted) return;
+    final use = await confirmPhoto(context, image: logo.provider, aspectRatio: ImageRatios.square, title: 'Use this logo?');
     if (!use || !mounted) return;
 
     setState(() => _isUploading = true);
     try {
       final url = await SupabaseImageService.uploadImage(
-        file: File(picked.path),
+        image: logo,
         folder: 'logos',
         shopId: widget.shop.id,
         fileName: 'logo.jpg', // fixed name + upsert: re-uploading replaces the old logo

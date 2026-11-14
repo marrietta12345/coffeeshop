@@ -1,11 +1,11 @@
 {
-    "name": "local_based_coffee_shops_mobile_application",
-    "short_name": "local_based_coffee_shops_mobile_application",
+    "name": "Kafelo",
+    "short_name": "Kafelo",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Kafelo: discover local coffee shops around Butuan City.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

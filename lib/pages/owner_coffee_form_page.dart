@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -13,6 +12,7 @@ import '../widgets/auth_text_field.dart';
 import '../widgets/category_chip.dart';
 import '../widgets/settings_widgets.dart';
 import '../widgets/top_banner.dart';
+import '../utils/picked_image.dart';
 
 /// Full-screen form to add a coffee to the owner's menu, or edit one
 /// ([existing]). Pops with true once saved. [menu] is the current menu,
@@ -40,7 +40,7 @@ class _OwnerCoffeeFormPageState extends State<OwnerCoffeeFormPage> {
   late bool _available = widget.existing?.available ?? true;
   late bool _bestSeller = widget.existing?.bestSeller ?? false;
   late bool _featured = widget.existing?.featured ?? false;
-  File? _newImage;
+  PickedImage? _newImage;
   bool _removeImage = false;
   bool _isSaving = false;
   bool _saved = false; // lets the page close after a successful save
@@ -55,7 +55,7 @@ class _OwnerCoffeeFormPageState extends State<OwnerCoffeeFormPage> {
         _available,
         _bestSeller,
         _featured,
-        _newImage?.path,
+        _newImage == null ? '' : identityHashCode(_newImage), // a newly picked photo
         _removeImage,
       ].join('|');
 
@@ -113,9 +113,10 @@ class _OwnerCoffeeFormPageState extends State<OwnerCoffeeFormPage> {
     try {
       // Good quality, sensible file size; the whole photo is always shown.
       final picked = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 85, maxWidth: 1600);
-      if (picked == null || !mounted) return;
-      final file = File(picked.path);
-      final use = await confirmPhoto(context, image: FileImage(file), aspectRatio: ImageRatios.coffee, title: 'Use this coffee photo?');
+      if (picked == null) return;
+      final file = await PickedImage.fromXFile(picked);
+      if (!mounted) return;
+      final use = await confirmPhoto(context, image: file.provider, aspectRatio: ImageRatios.coffee, title: 'Use this coffee photo?');
       if (!use || !mounted) return;
       setState(() {
         _newImage = file;
@@ -366,7 +367,7 @@ class _FieldLabel extends StatelessWidget {
 }
 
 class _PhotoPicker extends StatelessWidget {
-  final File? newImage;
+  final PickedImage? newImage;
   final String? currentUrl;
   final VoidCallback onPick;
   final VoidCallback onRemove;
@@ -379,7 +380,7 @@ class _PhotoPicker extends StatelessWidget {
     Widget preview;
     // Shown exactly as on the menu: the whole drink in a square box.
     if (newImage != null) {
-      preview = FittedImage(image: FileImage(newImage!), width: double.infinity, height: double.infinity);
+      preview = FittedImage(image: newImage!.provider, width: double.infinity, height: double.infinity);
     } else if (currentUrl?.isNotEmpty ?? false) {
       preview = FittedImage.network(currentUrl!, width: double.infinity, height: double.infinity);
     } else {

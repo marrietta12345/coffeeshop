@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:geocoding/geocoding.dart';
+import '../utils/address_lookup.dart';
 import 'package:latlong2/latlong.dart';
 import '../theme/app_colors.dart';
 import '../models/coffee_shop.dart';
@@ -164,13 +164,9 @@ class _ShopLocationSectionState extends State<ShopLocationSection> {
   Future<void> _fillAddressFrom(LatLng point, {bool always = false}) async {
     if (!always && !_c.isMall && _c.address.text.trim().isNotEmpty) return;
     try {
-      final placemarks = await placemarkFromCoordinates(point.latitude, point.longitude).timeout(const Duration(seconds: 8));
-      if (placemarks.isEmpty || !mounted) return;
-      final place = placemarks.first;
-      final parts = [place.street, place.subLocality, place.locality, place.administrativeArea]
-          .where((part) => part != null && part.trim().isNotEmpty)
-          .toList();
-      if (parts.isNotEmpty) _c.address.text = parts.join(', ');
+      final address = await AddressLookup.addressFrom(point);
+      if (address == null || !mounted) return;
+      _c.address.text = address;
     } catch (e) {
       debugPrint('Reverse geocoding failed for $point: $e');
     }
@@ -244,8 +240,7 @@ class _ShopLocationSectionState extends State<ShopLocationSection> {
     if (start == null && _c.location == null && _c.address.text.trim().isNotEmpty) {
       _c.setLocating(true);
       try {
-        final found = await locationFromAddress(_c.address.text.trim()).timeout(const Duration(seconds: 8));
-        if (found.isNotEmpty) center = LatLng(found.first.latitude, found.first.longitude);
+        center = await AddressLookup.pointFrom(_c.address.text.trim()) ?? center;
       } catch (e) {
         debugPrint('Geocoding failed for "${_c.address.text.trim()}": $e');
       }

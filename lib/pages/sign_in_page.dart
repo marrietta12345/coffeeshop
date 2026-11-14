@@ -10,6 +10,7 @@ import '../utils/user_role.dart';
 import '../utils/auth_error_messages.dart';
 import 'sign_up_page.dart';
 import 'main_nav_page.dart';
+import '../utils/web_session.dart';
 
 /// Sign-in for Coffee Explorer (customer) accounts. After Firebase Auth
 /// succeeds, checks the account's stored role in Firestore — if it was
@@ -42,6 +43,7 @@ class _SignInPageState extends State<SignInPage> {
     setState(() => _isLoading = true);
 
     try {
+      await applyWebRememberMe(_rememberMe);
       final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text,

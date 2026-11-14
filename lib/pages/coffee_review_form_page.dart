@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../widgets/fitted_image.dart';
@@ -8,6 +7,7 @@ import '../models/review.dart';
 import '../utils/coffee_review_service.dart';
 import '../widgets/owner_page_widgets.dart' show confirmDelete;
 import '../widgets/top_banner.dart';
+import '../utils/picked_image.dart';
 
 /// What happened on the coffee review form.
 enum CoffeeReviewResult { saved, deleted }
@@ -28,7 +28,7 @@ class CoffeeReviewFormPage extends StatefulWidget {
 class _CoffeeReviewFormPageState extends State<CoffeeReviewFormPage> {
   late int _rating = (widget.existing?.rating.round() ?? 5).clamp(1, 5);
   late final TextEditingController _text = TextEditingController(text: widget.existing?.text ?? '');
-  File? _photo; // newly picked
+  PickedImage? _photo; // newly picked
   late bool _keepExistingPhoto = widget.existing?.hasPhoto ?? false;
   bool _busy = false;
 
@@ -46,9 +46,11 @@ class _CoffeeReviewFormPageState extends State<CoffeeReviewFormPage> {
   Future<void> _pickPhoto() async {
     try {
       final picked = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 80, maxWidth: 1600);
-      if (picked == null || !mounted) return;
+      if (picked == null) return;
+      final photo = await PickedImage.fromXFile(picked);
+      if (!mounted) return;
       setState(() {
-        _photo = File(picked.path);
+        _photo = photo;
         _keepExistingPhoto = false;
       });
     } catch (e) {
@@ -248,7 +250,7 @@ class _CoffeeReviewFormPageState extends State<CoffeeReviewFormPage> {
                                 width: double.infinity,
                                 height: 160,
                                 child: _photo != null
-                                    ? FittedImage(image: FileImage(_photo!), width: double.infinity, height: 160)
+                                    ? FittedImage(image: _photo!.provider, width: double.infinity, height: 160)
                                     : FittedImage.network(widget.existing!.photoUrl!, width: double.infinity, height: 160),
                               ),
                             ),

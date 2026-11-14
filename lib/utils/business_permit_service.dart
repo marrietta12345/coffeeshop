@@ -79,7 +79,12 @@ class BusinessPermitService {
 
   /// Why a picked file can't be used, or null when it's fine.
   static String? validate({required String fileName, required int sizeBytes}) {
-    if (contentTypeFor(extensionOf(fileName)) == null) {
+    final ext = extensionOf(fileName);
+    // iPhone photos are HEIC by default; most browsers can't open them.
+    if (ext == 'heic' || ext == 'heif') {
+      return "iPhone photos (HEIC) aren't supported. Please save the permit as JPG or PDF and try again.";
+    }
+    if (contentTypeFor(ext) == null) {
       return 'Please choose a JPG, PNG or PDF file.';
     }
     if (sizeBytes <= 0) return "That file looks empty. Please choose another one.";

@@ -10,6 +10,7 @@ import '../utils/user_role.dart';
 import '../utils/auth_error_messages.dart';
 import 'business_sign_up_page.dart';
 import 'owner_main_nav_page.dart';
+import '../utils/web_session.dart';
 
 /// Sign-in for Coffee Shop Owner accounts. Mirrors SignInPage exactly,
 /// but checks for role == owner — a Coffee Explorer account attempting
@@ -41,6 +42,7 @@ class _BusinessSignInPageState extends State<BusinessSignInPage> {
     setState(() => _isLoading = true);
 
     try {
+      await applyWebRememberMe(_rememberMe);
       final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text,

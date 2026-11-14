@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
@@ -9,6 +8,7 @@ import '../utils/auth_error_messages.dart';
 import '../widgets/auth_text_field.dart';
 import '../widgets/settings_widgets.dart';
 import '../widgets/top_banner.dart';
+import '../utils/picked_image.dart';
 
 /// View + edit the Coffee Explorer's profile: photo, name, username and
 /// email. Name and photo are kept on both the Firebase Auth user (so the
@@ -31,7 +31,7 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
   bool _isLoading = true;
   bool _isEditing = false;
   bool _isSaving = false;
-  File? _pickedPhoto;
+  PickedImage? _pickedPhoto;
 
   String _name = '';
   String _username = '';
@@ -93,7 +93,9 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
   Future<void> _pickPhoto() async {
     final picked = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 80, maxWidth: 800);
     if (picked == null) return;
-    setState(() => _pickedPhoto = File(picked.path));
+    final photo = await PickedImage.fromXFile(picked);
+    if (!mounted) return;
+    setState(() => _pickedPhoto = photo);
   }
 
   /// Asks for the current password — Firebase requires a recent sign-in
@@ -159,7 +161,7 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
       if (_pickedPhoto != null) {
         // Timestamped name so the new photo isn't served from image cache.
         newPhotoUrl = await SupabaseImageService.uploadImage(
-          file: _pickedPhoto!,
+          image: _pickedPhoto!,
           folder: 'avatars',
           shopId: user.uid,
           fileName: 'avatar_${DateTime.now().millisecondsSinceEpoch}.jpg',
@@ -235,7 +237,7 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
   Widget _buildAvatar({required bool editable}) {
     ImageProvider? image;
     if (_pickedPhoto != null) {
-      image = FileImage(_pickedPhoto!);
+      image = _pickedPhoto!.provider;
     } else if (_photoUrl != null && _photoUrl!.isNotEmpty) {
       image = NetworkImage(_photoUrl!);
     }

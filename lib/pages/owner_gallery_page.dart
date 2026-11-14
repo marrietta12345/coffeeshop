@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
@@ -9,6 +8,7 @@ import '../models/coffee_shop.dart';
 import '../utils/owner_shop_service.dart';
 import '../utils/supabase_image_service.dart';
 import '../widgets/top_banner.dart';
+import '../utils/picked_image.dart';
 
 /// Real photo gallery management — pick photos from the device, upload
 /// them to Supabase Storage, and save the resulting URLs onto the shop's
@@ -35,7 +35,9 @@ class _OwnerGalleryPageState extends State<OwnerGalleryPage> {
     // One photo: preview it in the 16:9 box it can be shown in (your first
     // photo is the café's header) — whole, not cropped.
     if (picked.length == 1) {
-      final use = await confirmPhoto(context, image: FileImage(File(picked.first.path)), aspectRatio: ImageRatios.banner, title: 'Add this photo?');
+      final preview = await PickedImage.fromXFile(picked.first);
+      if (!mounted) return;
+      final use = await confirmPhoto(context, image: preview.provider, aspectRatio: ImageRatios.banner, title: 'Add this photo?');
       if (!use || !mounted) return;
     }
 
@@ -46,7 +48,7 @@ class _OwnerGalleryPageState extends State<OwnerGalleryPage> {
       try {
         final fileName = '${DateTime.now().millisecondsSinceEpoch}_${uploadedUrls.length}.jpg';
         final url = await SupabaseImageService.uploadImage(
-          file: File(file.path),
+          image: await PickedImage.fromXFile(file),
           folder: 'gallery',
           shopId: widget.shop.id,
           fileName: fileName,

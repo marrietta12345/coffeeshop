@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -18,6 +17,7 @@ import '../models/operating_hours.dart';
 import '../widgets/schedule_editor.dart';
 import '../widgets/shop_location_section.dart';
 import 'business_sign_in_page.dart';
+import '../utils/picked_image.dart';
 
 /// Sign-up for Coffee Shop Owner accounts — sectioned form (Personal
 /// Information / Coffee Shop Information) on a plain white page, matching
@@ -52,8 +52,8 @@ class _BusinessSignUpPageState extends State<BusinessSignUpPage> {
   bool _isLoading = false;
   // Errors show on submit first, then update live as the user fixes them.
   AutovalidateMode _autovalidate = AutovalidateMode.disabled;
-  XFile? _logoFile;
-  XFile? _bannerFile;
+  PickedImage? _logoFile;
+  PickedImage? _bannerFile;
 
   @override
   void dispose() {
@@ -72,16 +72,20 @@ class _BusinessSignUpPageState extends State<BusinessSignUpPage> {
 
   Future<void> _pickLogo() async {
     final picked = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 90, maxWidth: 800);
-    if (picked == null || !mounted) return;
-    final use = await confirmPhoto(context, image: FileImage(File(picked.path)), aspectRatio: ImageRatios.square, title: 'Use this logo?');
-    if (use && mounted) setState(() => _logoFile = picked);
+    if (picked == null) return;
+    final logo = await PickedImage.fromXFile(picked);
+    if (!mounted) return;
+    final use = await confirmPhoto(context, image: logo.provider, aspectRatio: ImageRatios.square, title: 'Use this logo?');
+    if (use && mounted) setState(() => _logoFile = logo);
   }
 
   Future<void> _pickBanner() async {
     final picked = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 85, maxWidth: 1920);
-    if (picked == null || !mounted) return;
-    final use = await confirmPhoto(context, image: FileImage(File(picked.path)), aspectRatio: ImageRatios.banner, title: 'Use this cover photo?');
-    if (use && mounted) setState(() => _bannerFile = picked);
+    if (picked == null) return;
+    final banner = await PickedImage.fromXFile(picked);
+    if (!mounted) return;
+    final use = await confirmPhoto(context, image: banner.provider, aspectRatio: ImageRatios.banner, title: 'Use this cover photo?');
+    if (use && mounted) setState(() => _bannerFile = banner);
   }
 
   Future<void> _handleSignUp() async {
@@ -168,7 +172,7 @@ class _BusinessSignUpPageState extends State<BusinessSignUpPage> {
         if (_logoFile != null) {
           try {
             final url = await SupabaseImageService.uploadImage(
-              file: File(_logoFile!.path),
+              image: _logoFile!,
               folder: 'logos',
               shopId: shopId,
               fileName: 'logo.jpg',
@@ -181,7 +185,7 @@ class _BusinessSignUpPageState extends State<BusinessSignUpPage> {
         if (_bannerFile != null) {
           try {
             final url = await SupabaseImageService.uploadImage(
-              file: File(_bannerFile!.path),
+              image: _bannerFile!,
               folder: 'banners',
               shopId: shopId,
               fileName: 'banner.jpg',
@@ -403,7 +407,7 @@ class _BusinessSignUpPageState extends State<BusinessSignUpPage> {
                             shape: BoxShape.circle,
                             color: AppColors.inputFill,
                             image: _logoFile != null
-                                ? DecorationImage(image: FileImage(File(_logoFile!.path)), fit: BoxFit.cover)
+                                ? DecorationImage(image: _logoFile!.provider, fit: BoxFit.cover)
                                 : null,
                           ),
                           child: _logoFile == null
@@ -437,7 +441,7 @@ class _BusinessSignUpPageState extends State<BusinessSignUpPage> {
                                     Text('Add a cover photo', style: TextStyle(fontSize: 12, color: AppColors.textGrey)),
                                   ],
                                 )
-                              : FittedImage(image: FileImage(File(_bannerFile!.path)), width: double.infinity, height: double.infinity),
+                              : FittedImage(image: _bannerFile!.provider, width: double.infinity, height: double.infinity),
                         ),
                       ),
                       const SizedBox(height: 32),

@@ -1,5 +1,5 @@
-import 'dart:io';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'picked_image.dart';
 
 /// All shop-related images (gallery photos, shop logos, best-seller item
 /// photos) are stored in Supabase Storage — NOT Firebase Storage.
@@ -28,16 +28,17 @@ class SupabaseImageService {
   /// returns its public URL. `folder` should be one of: 'gallery',
   /// 'logos', 'best-sellers'.
   static Future<String> uploadImage({
-    required File file,
+    required PickedImage image,
     required String folder,
     required String shopId,
     required String fileName,
   }) async {
     final path = '$folder/$shopId/$fileName';
-    await _bucket.upload(
+    // Bytes, not a file path, so uploads also work in a web browser.
+    await _bucket.uploadBinary(
       path,
-      file,
-      fileOptions: const FileOptions(upsert: true, contentType: 'image/jpeg'),
+      image.bytes,
+      fileOptions: FileOptions(upsert: true, contentType: image.contentType),
     );
     return _bucket.getPublicUrl(path);
   }
