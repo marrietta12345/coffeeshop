@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/map_area_focus.dart';
 import '../widgets/custom_bottom_nav.dart';
 import 'home_page.dart';
 import 'explore_page.dart';
@@ -16,6 +17,23 @@ class MainNavPage extends StatefulWidget {
 
 class _MainNavPageState extends State<MainNavPage> {
   int _navIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    MapAreaFocus.current.addListener(_showMapForArea);
+  }
+
+  @override
+  void dispose() {
+    MapAreaFocus.current.removeListener(_showMapForArea);
+    super.dispose();
+  }
+
+  /// A place picked in Explore search opens the Map tab on that place.
+  void _showMapForArea() {
+    if (MapAreaFocus.current.value != null && _navIndex != 0) setState(() => _navIndex = 0);
+  }
 
   @override
   Widget build(BuildContext context) {

@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../theme/app_colors.dart';
 import '../models/coffee_preferences.dart';
 import '../models/coffee_shop.dart';
+import '../models/operating_hours.dart';
 import '../widgets/best_seller_tile.dart';
 import '../widgets/coffee_search_bar.dart';
 import '../widgets/shop_photo.dart';
@@ -14,6 +15,7 @@ import '../utils/location_service.dart';
 import '../utils/menu_service.dart';
 import '../utils/page_transitions.dart';
 import '../utils/cafe_search.dart';
+import '../utils/map_area_focus.dart';
 import '../utils/recommendations.dart';
 import '../utils/user_profile_service.dart';
 import 'all_best_sellers_page.dart';
@@ -211,6 +213,10 @@ class _ExplorePageState extends State<ExplorePage> with WidgetsBindingObserver {
       _pickedSuggestion = suggestion;
       _submittedQuery = null;
     });
+    // A place opens on the Map, zoomed to its cafés (the list stays here too).
+    if (suggestion.isPlace) {
+      MapAreaFocus.show(MapArea(label: suggestion.label, kind: suggestion.kind, shops: suggestion.shops));
+    }
   }
 
   void _clearSearch() {
@@ -391,6 +397,7 @@ class _ExplorePageState extends State<ExplorePage> with WidgetsBindingObserver {
               _SearchSuggestionsCard(
                 query: _query.trim(),
                 suggestions: CafeSearch.suggestions(_query, _shops),
+                userLocation: _hasLocation ? _userLocation : null,
                 onSelected: _pickSuggestion,
                 onSeeAll: () => _onSearchSubmitted(_query),
               ),
@@ -499,22 +506,81 @@ class _EmptyNote extends StatelessWidget {
 class _SearchSuggestionsCard extends StatelessWidget {
   final String query;
   final List<SearchSuggestion> suggestions;
+  final LatLng? userLocation; // null when location is off
   final ValueChanged<SearchSuggestion> onSelected;
   final VoidCallback onSeeAll;
 
   const _SearchSuggestionsCard({
     required this.query,
     required this.suggestions,
+    required this.userLocation,
     required this.onSelected,
     required this.onSeeAll,
   });
 
   static const Map<SuggestionKind, (IconData, String)> _kindInfo = {
-    SuggestionKind.location: (Icons.location_on_rounded, 'Location'),
+    SuggestionKind.location: (Icons.location_on_rounded, 'Area'),
+    SuggestionKind.mall: (Icons.local_mall_rounded, 'Mall'),
+    SuggestionKind.landmark: (Icons.near_me_rounded, 'Landmark'),
     SuggestionKind.coffeeType: (Icons.local_cafe_rounded, 'Coffee'),
     SuggestionKind.atmosphere: (Icons.weekend_rounded, 'Atmosphere'),
     SuggestionKind.feature: (Icons.check_circle_outline_rounded, 'Feature'),
   };
+
+  static const _distance = Distance();
+
+  /// A place's icon from what it is: school, airport, hotel, church, mall…
+  static IconData _placeIcon(SearchSuggestion suggestion) {
+    if (suggestion.kind == SuggestionKind.mall) return Icons.local_mall_rounded;
+    final name = suggestion.label.toLowerCase();
+    bool has(List<String> words) => words.any((w) => RegExp('\\b$w').hasMatch(name));
+    if (has(['university', 'college', 'school', 'fsuu', 'csu', 'phinma', 'sjit', 'anhs', 'pecit', 'tesda', 'campus'])) {
+      return Icons.school_rounded;
+    }
+    if (has(['airport'])) return Icons.flight_rounded;
+    if (has(['hotel'])) return Icons.hotel_rounded;
+    if (has(['church', 'chapel'])) return Icons.church_rounded;
+    if (has(['sm city', 'robinsons', 'mall', 'gaisano', 'square', 'food court', 'food hub'])) return Icons.storefront_rounded;
+    if (has(['gym', 'fitness'])) return Icons.fitness_center_rounded;
+    return suggestion.kind == SuggestionKind.landmark ? Icons.near_me_rounded : Icons.location_on_rounded;
+  }
+
+  /// "3 cafés · 2 open now · 1.1 km away" — what helps decide where to go.
+  String _placeDetails(SearchSuggestion suggestion) {
+    final count = suggestion.cafeCount == 1 ? '1 café' : '${suggestion.cafeCount} cafés';
+    final parts = [count];
+    final now = DateTime.now();
+    final open = suggestion.shops.where((s) => s.hours.statusAt(now).state == OpenState.open).length;
+    if (open > 0) parts.add('$open open now');
+    final from = userLocation;
+    if (from != null) {
+      final located = suggestion.shops.where((s) => s.hasLocation).toList();
+      if (located.isNotEmpty) {
+        double meters(CoffeeShop s) => _distance.as(LengthUnit.Meter, from, LatLng(s.latitude, s.longitude));
+        located.sort((a, b) => meters(a).compareTo(meters(b)));
+        final label = formatDistance(from, LatLng(located.first.latitude, located.first.longitude));
+        if (label.isNotEmpty) parts.add(label);
+      }
+    }
+    return parts.join(' · ');
+  }
+
+  /// [text] with the letters the user typed in bold ("Ba" → **Ba**yanihan).
+  Widget _highlighted(String text) {
+    const base = TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textDark);
+    final range = CafeSearch.matchRange(text, CafeSearch.normalize(query));
+    return Text.rich(
+      range == null
+          ? TextSpan(text: text, style: base.copyWith(fontWeight: FontWeight.w700))
+          : TextSpan(style: base, children: [
+              TextSpan(text: text.substring(0, range.$1)),
+              TextSpan(text: text.substring(range.$1, range.$2), style: const TextStyle(fontWeight: FontWeight.w800)),
+              TextSpan(text: text.substring(range.$2)),
+            ]),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -589,7 +655,10 @@ class _SearchSuggestionsCard extends StatelessWidget {
     final count = suggestion.cafeCount == 1 ? '1 café' : '${suggestion.cafeCount} cafés';
     final subtitle = shop != null
         ? (shop.locationLabel.isEmpty ? shop.categoryLabel : shop.locationLabel)
-        : '${info?.$2 ?? ''} · $count';
+        : suggestion.isPlace
+            ? _placeDetails(suggestion)
+            : '${info?.$2 ?? ''} · $count';
+    final icon = suggestion.isPlace ? _placeIcon(suggestion) : (info?.$1 ?? Icons.search_rounded);
 
     return InkWell(
       onTap: () => onSelected(suggestion),
@@ -605,7 +674,7 @@ class _SearchSuggestionsCard extends StatelessWidget {
                       width: 52,
                       height: 39,
                       color: AppColors.primaryBrown.withValues(alpha: 0.12),
-                      child: Icon(info?.$1 ?? Icons.search_rounded, color: AppColors.primaryBrown, size: 22),
+                      child: Icon(icon, color: AppColors.primaryBrown, size: 22),
                     ),
             ),
             const SizedBox(width: 12),
@@ -613,12 +682,7 @@ class _SearchSuggestionsCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    suggestion.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textDark),
-                  ),
+                  _highlighted(suggestion.label),
                   const SizedBox(height: 2),
                   Text(
                     subtitle,

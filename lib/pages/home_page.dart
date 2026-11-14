@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../utils/map_area_focus.dart';
 import '../utils/map_pin_spread.dart';
 import '../theme/app_colors.dart';
 import '../models/coffee_shop.dart';
@@ -61,6 +62,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin, Widg
   bool _hasRealLocation = false;
   bool _isLocating = true;
 
+  // A place picked in Explore search ("Bayanihan", "Near FSUU"): only its
+  // cafés are pinned until it's cleared.
+  MapArea? _area;
+  Set<String> _areaIds = const {};
+
   @override
   void initState() {
     super.initState();
@@ -77,6 +83,44 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin, Widg
     );
     _loadCurrentLocation(showErrors: false);
     WidgetsBinding.instance.addObserver(this);
+    MapAreaFocus.current.addListener(_onAreaChanged);
+  }
+
+  void _onAreaChanged() {
+    if (!mounted) return;
+    final area = MapAreaFocus.current.value;
+    setState(() {
+      _area = area;
+      _areaIds = area?.shopIds ?? const {};
+      if (area != null) {
+        _searchController.clear();
+        _query = '';
+        _showSuggestions = false;
+      }
+    });
+    if (area == null) return;
+    _setHighlightedShop(null);
+    // After the Map tab is on screen, zoom to fit the place's cafés.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _fitArea(area);
+    });
+  }
+
+  /// Zooms so every café of [area] is visible between the search bar and
+  /// the bottom panel.
+  void _fitArea(MapArea area) {
+    final points = [
+      for (final shop in area.shops)
+        if (shop.hasLocation) LatLng(shop.latitude, shop.longitude),
+    ];
+    if (points.isEmpty) return;
+    final top = MediaQuery.paddingOf(context).top + 16 + 54 + 60;
+    final bottom = MediaQuery.sizeOf(context).height < 520 ? 90.0 : 300.0;
+    _mapController.fitCamera(CameraFit.coordinates(
+      coordinates: points,
+      padding: EdgeInsets.fromLTRB(56, top, 56, bottom),
+      maxZoom: 16.5,
+    ));
   }
 
   /// Back in Kafelo (e.g. after turning on Location or allowing it in
@@ -111,6 +155,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin, Widg
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    MapAreaFocus.current.removeListener(_onAreaChanged);
     _searchController.dispose();
     _searchFocus.dispose();
     _pulseController.dispose();
@@ -156,6 +201,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin, Widg
   }
 
   void _onSearchChanged(String value) {
+    // Searching the map again shows every café again.
+    if (value.trim().isNotEmpty && _area != null) MapAreaFocus.clear();
     setState(() {
       _query = value;
       _showSuggestions = value.trim().isNotEmpty;
@@ -281,7 +328,23 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin, Widg
 
   // Real shops owners have created via sign-up, live from Firestore.
   /// The map only shows cafés whose location is set.
-  List<CoffeeShop> get _filteredShops => _liveShops.where((s) => s.hasLocation).toList();
+  /// While a place from Explore is shown, only that place's cafés.
+  List<CoffeeShop> get _filteredShops =>
+      _liveShops.where((s) => s.hasLocation && (_area == null || _areaIds.contains(s.id))).toList();
+
+  /// The bottom panel's cafés: the picked place's (nearest first when
+  /// location is on), otherwise the nearby ones.
+  List<CoffeeShop> get _panelShops {
+    if (_area == null) return _nearbyShops;
+    final shops = _filteredShops;
+    if (_hasRealLocation) {
+      double meters(CoffeeShop s) => _distanceCalculator.as(LengthUnit.Meter, _userLocation, LatLng(s.latitude, s.longitude));
+      shops.sort((a, b) => meters(a).compareTo(meters(b)));
+    } else {
+      shops.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    }
+    return shops;
+  }
 
   static const _distanceCalculator = Distance();
   static const double _nearbyRadiusMeters = 20000; // 20 km
@@ -445,12 +508,16 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin, Widg
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'Nearby Coffee Shops',
-                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.textDark),
+                    Expanded(
+                      child: Text(
+                        _area?.label ?? 'Nearby Coffee Shops',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.textDark),
+                      ),
                     ),
                     GestureDetector(
-                      onTap: _hasRealLocation
+                      onTap: _hasRealLocation || _area != null
                           ? () => _showResultsSheet(context)
                           : () {
                               showTopBanner(
@@ -471,13 +538,34 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin, Widg
                 if (!compactPanel) ...[
                 const SizedBox(height: 3),
                 Text(
-                  'Explore the best coffee spots near you.',
+                  _area == null
+                      ? 'Explore the best coffee spots near you.'
+                      : (_filteredShops.length == 1 ? '1 café here' : '${_filteredShops.length} cafés here'),
                   style: const TextStyle(fontSize: 11.5, color: AppColors.textGrey),
                 ),
                 const SizedBox(height: 12),
                 SizedBox(
                   height: ShopMiniCard.heightFor(130, MediaQuery.textScalerOf(context)),
-                  child: _isLocating
+                  child: _area != null
+                      ? ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _panelShops.length,
+                          separatorBuilder: (_, _) => const SizedBox(width: 12),
+                          itemBuilder: (context, index) {
+                            final shop = _panelShops[index];
+                            return ShopMiniCard(
+                              shop: shop,
+                              distanceLabel:
+                                  _hasRealLocation ? formatDistance(_userLocation, LatLng(shop.latitude, shop.longitude)) : '',
+                              width: 130,
+                              onTap: () {
+                                _moveCameraToShop(shop, 16);
+                                _showPinPreview(shop);
+                              },
+                            );
+                          },
+                        )
+                      : _isLocating
                       ? const Center(
                           child: SizedBox(
                             width: 22,
@@ -533,6 +621,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin, Widg
                   onSubmitted: _onSearchSubmitted,
                   onClear: _clearSearch,
                 ),
+                if (_area != null && !_showSuggestions) ...[
+                  const SizedBox(height: 10),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: _AreaChip(area: _area!, count: _filteredShops.length, onClear: MapAreaFocus.clear),
+                  ),
+                ],
                 if (_showSuggestions) ...[
                   const SizedBox(height: 8),
                   _SearchSuggestionsCard(
@@ -572,7 +667,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin, Widg
             child: ListView.builder(
               controller: scrollController,
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-              itemCount: _nearbyShops.length + 1,
+              itemCount: _panelShops.length + 1,
               itemBuilder: (context, index) {
                 if (index == 0) {
                   return Center(
@@ -587,7 +682,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin, Widg
                     ),
                   );
                 }
-                final shop = _nearbyShops[index - 1];
+                final shop = _panelShops[index - 1];
                 return _ShopListCard(
                   shop: shop,
                   onTap: () {
@@ -1083,6 +1178,50 @@ class _ShopListCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 OpenStatusBadge(hours: shop.hours, tinted: true),
               ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// "📍 Bayanihan · 3 cafés  ✕" — shown under the map's search bar while a
+/// place picked in Explore is on the map; ✕ shows every café again.
+class _AreaChip extends StatelessWidget {
+  final MapArea area;
+  final int count;
+  final VoidCallback onClear;
+
+  const _AreaChip({required this.area, required this.count, required this.onClear});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      elevation: 3,
+      shadowColor: Colors.black26,
+      borderRadius: BorderRadius.circular(22),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 4, 4, 4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.location_on_rounded, size: 18, color: AppColors.primaryBrown),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                '${area.label} · ${count == 1 ? '1 café' : '$count cafés'}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark),
+              ),
+            ),
+            IconButton(
+              tooltip: 'Show all cafés',
+              visualDensity: VisualDensity.compact,
+              icon: const Icon(Icons.close_rounded, size: 18, color: AppColors.textGrey),
+              onPressed: onClear,
             ),
           ],
         ),

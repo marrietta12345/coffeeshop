@@ -20,11 +20,17 @@ void main() {
     final data = jsonDecode(File('tool/cafes/cafes.json').readAsStringSync()) as Map<String, dynamic>;
     final cafes = (data['cafes'] as List).cast<Map<String, dynamic>>();
 
-    test('20 cafés with unique ids and a Facebook page', () {
-      expect(cafes.length, 20);
+    test('60 cafés with unique ids, an address and a pin in Butuan City', () {
+      expect(cafes.length, 60);
       expect(cafes.map((c) => c['id']).toSet().length, cafes.length);
-      expect(cafes.every((c) => (c['facebookUrl'] as String).startsWith('https://www.facebook.com/')), isTrue);
       expect(cafes.every((c) => (c['address'] as String).isNotEmpty), isTrue);
+      for (final c in cafes) {
+        // Butuan City is roughly 8.85–9.05 N, 125.45–125.65 E.
+        expect(c['latitude'] as num, inInclusiveRange(8.85, 9.05), reason: c['id'] as String);
+        expect(c['longitude'] as num, inInclusiveRange(125.45, 125.65), reason: c['id'] as String);
+        final facebook = c['facebookUrl'] as String?;
+        if (facebook != null) expect(facebook, startsWith('https://www.facebook.com/'));
+      }
     });
 
     test('uses the same options as the app (Café Features, hours, menu categories)', () {
@@ -41,7 +47,7 @@ void main() {
         for (final day in (cafe['hours'] as Map).keys) {
           expect(OperatingHours.dayKeys.values, contains(day));
         }
-        for (final item in (cafe['menu'] as List).cast<Map<String, dynamic>>()) {
+        for (final item in ((cafe['menu'] as List?) ?? const []).cast<Map<String, dynamic>>()) {
           expect(CoffeeCategory.all, contains(item['category']));
           if (item['price'] != null) expect(item['price'], greaterThan(0)); // null = no price yet
         }

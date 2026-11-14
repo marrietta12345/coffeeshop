@@ -55,13 +55,60 @@ void main() {
 
     test('mall names and locations are suggested with café counts', () {
       final mall = CafeSearch.suggestions('gaisano', shops).single;
-      expect(mall.kind, SuggestionKind.location);
+      expect(mall.kind, SuggestionKind.mall);
       expect(mall.label, 'Gaisano Mall');
       expect(mall.cafeCount, 1);
+    });
 
-      final city = CafeSearch.suggestions('butuan', shops).firstWhere((s) => s.kind == SuggestionKind.location);
-      expect(city.label, 'Butuan City');
-      expect(city.cafeCount, 4);
+    test('the city itself is never suggested (every café is in Butuan)', () {
+      expect(CafeSearch.suggestions('butuan', shops).where((s) => s.isPlace), isEmpty);
+    });
+
+    test('places match from the start of a word ("b" → Bayanihan, not Montalban)', () {
+      final area = [
+        cafe('One', address: 'Montalban St., Villa Kananga, Butuan City'),
+        cafe('Two', address: 'DAR Subdivision, Bayanihan, Butuan City'),
+      ];
+      final places = CafeSearch.suggestions('b', area).where((s) => s.isPlace).map((s) => s.label).toList();
+      expect(places, ['Bayanihan']);
+    });
+
+    test('neighborhood names are cleaned and merged', () {
+      final area = [
+        cafe('One', address: 'Pili Drive St. corner Ipil Road, Brgy. Dagohoy (near TESDA), Butuan City'),
+        cafe('Two', address: '721 Molave St., Brgy. Dagohoy, Butuan City'),
+        cafe('Three', address: 'Purok 4, Imadejas Pob. (Bgy. 24), Butuan City'),
+      ];
+      final dagohoy = CafeSearch.suggestions('dago', area).single;
+      expect(dagohoy.label, 'Dagohoy'); // "Brgy." dropped, both cafés counted
+      expect(dagohoy.cafeCount, 2);
+      expect(CafeSearch.suggestions('imad', area).single.label, 'Imadejas'); // "Pob. (Bgy. 24)" dropped
+      expect(CafeSearch.suggestions('purok', area), isEmpty); // not a place people search
+      expect(CafeSearch.suggestions('molave', area).single.label, 'Molave St.'); // house number dropped
+    });
+
+    test('landmarks in addresses become "Near …" places', () {
+      final area = [
+        cafe('One', address: 'San Francisco St. (near FSUU), Butuan City'),
+        cafe('Two', address: 'Inside Caraga State University (CSU), Ampayon, Butuan City'),
+        cafe('Three', address: 'Rosewood Subdivision (near the entrance gate), Butuan City'),
+      ];
+      final fsuu = CafeSearch.suggestions('fs', area).single;
+      expect(fsuu.kind, SuggestionKind.landmark);
+      expect(fsuu.label, 'Near FSUU');
+      expect(CafeSearch.resultsForSuggestion(fsuu, area).single.name, 'One');
+      expect(CafeSearch.suggestions('csu', area).single.label, 'Inside Caraga State University (CSU)');
+      expect(CafeSearch.suggestions('entrance', area), isEmpty); // not a named place
+    });
+
+    test('a place suggestion carries its cafés (for the map)', () {
+      final area = [
+        cafe('One', address: 'Elloso St., Imadejas, Butuan City'),
+        cafe('Two', address: 'Montalban St., Imadejas, Butuan City'),
+        cafe('Three', address: 'Ochoa Avenue, Butuan City'),
+      ];
+      final imadejas = CafeSearch.suggestions('imadejas', area).single;
+      expect(imadejas.shops.map((s) => s.name), ['One', 'Two']);
     });
 
     test('coffee types, atmospheres and features are suggested', () {
@@ -86,6 +133,16 @@ void main() {
 
     test('empty query gives no suggestions', () {
       expect(labels('  '), isEmpty);
+    });
+  });
+
+  group('typed letters to bold', () {
+    test('marks where the query starts a word', () {
+      expect(CafeSearch.matchRange('Bayanihan', 'ba'), (0, 2));
+      expect(CafeSearch.matchRange('Near FSUU', 'fs'), (5, 7));
+      expect(CafeSearch.matchRange('J.C. Aquino Ave.', 'jcaq'), (0, 7));
+      expect(CafeSearch.matchRange('Kapé Kubo', 'kape'), (0, 4));
+      expect(CafeSearch.matchRange('Montalban St.', 'b'), isNull);
     });
   });
 
